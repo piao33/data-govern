@@ -4,6 +4,10 @@
 ```
 npm install
 ```
+### Custom element-ui theme
+```
+npm run theme
+```
 
 ### Compiles and hot-reloads for development
 ```

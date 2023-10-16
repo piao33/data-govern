@@ -1,6 +1,8 @@
 import Vue from 'vue';
 
-import { Button, Select, Table, Dialog, TableColumn, Form, FormItem, Input, Option } from 'element-ui';
+import { Button, Select, Table, Dialog, TableColumn, Form, FormItem, Input, Option, Row, Col, DatePicker,
+         
+} from 'element-ui';
 
 
  Vue.use(Button)
@@ -12,3 +14,6 @@ import { Button, Select, Table, Dialog, TableColumn, Form, FormItem, Input, Opti
  Vue.use(FormItem)
  Vue.use(Input)
  Vue.use(Option)
+ Vue.use(Row)
+ Vue.use(Col)
+ Vue.use(DatePicker)
