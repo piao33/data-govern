@@ -1,7 +1,7 @@
 import Vue from 'vue';
 
 import { Button, Select, Table, Dialog, TableColumn, Form, FormItem, Input, Option, Row, Col, DatePicker,
-         
+         Pagination, 
 } from 'element-ui';
 
 
@@ -17,3 +17,4 @@ import { Button, Select, Table, Dialog, TableColumn, Form, FormItem, Input, Opti
  Vue.use(Row)
  Vue.use(Col)
  Vue.use(DatePicker)
+ Vue.use(Pagination)

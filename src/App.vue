@@ -16,16 +16,17 @@ export default {
 </script>
 
 <style>
-body,p,ul,li{
+body,p,ul,li,h1,h2,h3,h4,h5,h6{
   margin: 0;
   padding:0;
   list-style: none;
 }
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
+  color: #393a3a;
 }
 
 </style>

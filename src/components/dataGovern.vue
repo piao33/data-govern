@@ -19,9 +19,8 @@
                     </el-col>
                     <el-col :span="8">
                         <el-form-item label="计算模式:" label-width="160px">
-                            <el-select style="width: 100%" v-model="form.model" placeholder="请选择计算模式">
-                                <el-option label="区域一" value="shanghai"></el-option>
-                                <el-option label="区域二" value="beijing"></el-option>
+                            <el-select style="width: 100%" v-model="form.model" placeholder="请选择计算模式" @change="getTemplate">
+                                <el-option :label="item.name" :value="item.id" v-for="item in modelList" :key="item.id"></el-option>
                             </el-select>
                         </el-form-item>
                     </el-col>
@@ -89,6 +88,7 @@
 
 <script>
 import governanceReport from  './governanceReport.vue'
+import { getCalcModelApi, getTemplateApi } from '/src/api/index.js'
 export default {
     name: 'dataGovern',
     components: {
@@ -98,6 +98,8 @@ export default {
         return {
             show: true,
             show2: false,
+            modelList: [],
+            templateTable: [],
             calcModel: [{
                 dataItem: '当季光伏典型出力',
                 period: '2016-05-02至 2016-08-02',
@@ -126,7 +128,14 @@ export default {
         },
         updateVisible(val) {
             this.show2 = val;
+        },
+        async getTemplate(id) {
+            this.templateTable = await getTemplateApi(id);
+            this.calcModel = this.templateTable
         }
+    },
+    async mounted() {
+        this.modelList = await getCalcModelApi()
     }
 }
 </script>
