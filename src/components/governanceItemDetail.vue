@@ -13,8 +13,12 @@
                 <el-button style="margin-left: 20px;" type="primary" size="mini" @click="getGovernanceDetail">查询</el-button>
             </div>
 
-            <el-table :data="governanceDetailTable" border>
-                <el-table-column type="index" label="序号" width="50" align="center"></el-table-column>
+            <el-table :data="tableList" border>
+                <el-table-column label="序号" width="50" align="center">
+                    <template slot-scope="scope">
+                        <span>{{ scope.$index+1 + (currentPage-1) * pageSize }}</span>
+                    </template>
+                </el-table-column>
                 <el-table-column property="name" label="数据表" align="center"></el-table-column>
                 <el-table-column property="info" label="数据信息" align="center"></el-table-column>
                 <el-table-column property="type" label="异常类型" align="center"></el-table-column>
@@ -26,7 +30,7 @@
                 </el-table-column>
             </el-table>
 
-            <el-pagination class="pagination" @size-change="handleSizeChange" @current-change="handleCurrentChange"
+            <el-pagination class="pagination" @current-change="handleCurrentChange"
                 :current-page="currentPage" :page-sizes="[10]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper"
                 :total="total">
             </el-pagination>
@@ -57,6 +61,9 @@ export default {
             set(val) {
                 this.$emit('updateVisible', val)
             }
+        },
+        tableList() {
+            return this.anomalieDetailList.slice((this.currentPage - 1)* this.pageSize, this.currentPage * this.pageSize )
         }
     },
 
@@ -74,7 +81,7 @@ export default {
         return {
             anomalieId: '',
             anomalieTypeList: [],
-            governanceDetailTable: [],
+            anomalieDetailList: [],
             governanceDetail: [],
             currentPage: 1,
             pageSize: 10,
@@ -90,7 +97,7 @@ export default {
         destory() {
             this.anomalieId = '';
             this.anomalieTypeList = [];
-            this.governanceDetailTable = [];
+            this.anomalieDetailList = [];
             this.total = 0;
             this.currentPage = 1;
             this.pageSize = 10;
@@ -99,14 +106,11 @@ export default {
             console.log(i, row)
         },
         async getGovernanceDetail() {
-            this.governanceDetailTable = await getAnomalieDetailApi(this.anomalieId)
-            this.total = this.governanceDetailTable.length;
+            this.anomalieDetailList = await getAnomalieDetailApi(this.anomalieId)
+            this.total = this.anomalieDetailList.length;
         },
-        handleSizeChange() {
-
-        },
-        handleCurrentChange() {
-
+        handleCurrentChange(val) {
+            this.currentPage = val;
         },
     }
 }
