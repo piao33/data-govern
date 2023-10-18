@@ -1,7 +1,7 @@
 import Vue from 'vue';
 
 import { Button, Select, Table, Dialog, TableColumn, Form, FormItem, Input, Option, Row, Col, DatePicker,
-         Pagination, 
+         Pagination, Loading, 
 } from 'element-ui';
 
 
@@ -18,3 +18,6 @@ import { Button, Select, Table, Dialog, TableColumn, Form, FormItem, Input, Opti
  Vue.use(Col)
  Vue.use(DatePicker)
  Vue.use(Pagination)
+ Vue.use(Loading.directive);
+
+Vue.prototype.$loading = Loading.service;

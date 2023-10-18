@@ -2,42 +2,42 @@
     <div class="content">
         <el-dialog title="" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
             width="90%">
-            <div class="header">
-                <h2>数据治理报告</h2>
-                <span>创建时间：{{createTime}}</span>
-            </div>
-            <div class="line line-total"></div>
+            <div v-loading="loading">
+                <div class="header">
+                    <h2>数据治理报告</h2>
+                    <span>创建时间：{{createTime}}</span>
+                </div>
+                <div class="line line-total"></div>
 
-            <ul class="overview">
-                <li class="overview-item" v-for="item in dataOverview" :key="item.id">
-                    <img :src="item.img" alt="">
-                    <div class="info">
-                        <p>{{ item.name }}</p>
-                        <span>{{ item.count }}</span>
+                <ul class="overview">
+                    <li class="overview-item" v-for="item in dataOverview" :key="item.id">
+                        <img :src="item.img" alt="">
+                        <div class="info">
+                            <p>{{ item.name }}</p>
+                            <span>{{ item.count }}</span>
+                        </div>
+                    </li>
+                </ul>
+
+                <div class="line line-detail"></div>
+
+                <div class="detail">
+                    <div class="radar-box">
+                        <p class="title">各类型数据异常情况</p>
+                        <div id="radar"></div>
                     </div>
-                </li>
-            </ul>
-
-            <div class="line line-detail"></div>
-
-            <div class="detail">
-                <div class="radar-box">
-                    <p class="title">各类型数据异常情况</p>
-                    <div id="radar"></div>
-                </div>
-                <div class="scatter-box">
-                    <p class="title">各数据表异常校验分析</p>
-                    <div id="scatter"></div>
+                    <div class="scatter-box">
+                        <p class="title">各数据表异常校验分析</p>
+                        <div id="scatter"></div>
+                    </div>
                 </div>
             </div>
-
         </el-dialog>
     </div>
 </template>
 
 <script>
 import { getReportOverviewApi } from '../api/index.js'
-import anomalieImg from '/src/assets/data.png'
 export default {
     name: 'governanceDetail',
     props: {
@@ -75,6 +75,7 @@ export default {
     },
     data() {
         return {
+            loading: false,
             radarChart: null,
             scatterChart: null,
             createTime: '',
@@ -83,9 +84,11 @@ export default {
     },
     methods: {
         async init() {
+            this.loading = true;
             let {overview, createTime} = await getReportOverviewApi(this.checkId);
             this.dataOverview = overview;
             this.createTime = createTime;
+            this.loading = false;
             await this.$nextTick()
             this.initRadar();
             this.initScatter();

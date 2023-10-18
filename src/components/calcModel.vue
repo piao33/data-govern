@@ -8,7 +8,7 @@
             @closed="destory"
             width="90%"
         >
-            <el-form :model="form" label-position="right">
+            <el-form :model="form" label-position="right" v-loading="loading_form">
                 <el-row>
                     <el-col :span="8">
                         <el-form-item label="方案名称:" label-width="100px">
@@ -58,7 +58,7 @@
                 <el-button class="btn" type="primary" @click="close">批量导出</el-button>
                 <el-button class="btn" type="primary" @click="close">批量删除</el-button>
             </div>
-            <el-table :data="templateTable" border multipleTable>
+            <el-table :data="templateTable" border multipleTable v-loading="loading_table">
                 <el-table-column type="selection" width="50" align="center"></el-table-column>
                 <el-table-column type="index" label="序号" width="50" align="center"></el-table-column>
                 <el-table-column property="name" label="数据项" width="280" align="center"></el-table-column>
@@ -120,6 +120,8 @@ export default {
     },
     data() {
         return {
+            loading_form: false,
+            loading_table: false,
             reportVisible: false,
             modelList: [],
             templateTable: [],
@@ -135,8 +137,11 @@ export default {
     },
     methods: {
         async init() {
+            this.loading_form = true;
+            this.loading_table = true;
             this.modelList = await getCalcModelApi()
             this.form.modelId = this.modelList[0].id;
+            this.loading_form = false;
             this.getTemplate(this.modelList[0].id);
         },
         destory() {
@@ -161,7 +166,9 @@ export default {
             this.reportVisible = val;
         },
         async getTemplate(id) {
+            this.loading_table = true;
             this.templateTable = await getTemplateApi({id});
+            this.loading_table = false;
         },
         checkData(id) {
             this.checkId = id;

@@ -6,14 +6,14 @@
                 说明：数据缺失是指数据存在一个时间点或者连续时间点的数据缺失情况
             </div>
 
-            <div style="margin: 12px 0;">
+            <div style="margin: 12px 0;" >
                 <el-select v-model="anomalieId" size="mini" placeholder="异常类型">
                     <el-option :label="item.type" :value="item.id" v-for="item in anomalieTypeList" :key="item.id"></el-option>
                 </el-select>
                 <el-button style="margin-left: 20px;" type="primary" size="mini" @click="getGovernanceDetail">查询</el-button>
             </div>
 
-            <el-table :data="tableList" border>
+            <el-table :data="tableList" border v-loading="loading">
                 <el-table-column label="序号" width="50" align="center">
                     <template slot-scope="scope">
                         <span>{{ scope.$index+1 + (currentPage-1) * pageSize }}</span>
@@ -34,7 +34,6 @@
                 :current-page="currentPage" :page-sizes="[10]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper"
                 :total="total">
             </el-pagination>
-
         </el-dialog>
     </div>
 </template>
@@ -79,6 +78,7 @@ export default {
     },
     data() {
         return {
+            loading: false,
             anomalieId: '',
             anomalieTypeList: [],
             anomalieDetailList: [],
@@ -90,9 +90,11 @@ export default {
     },
     methods: {
         async init() {
+            this.loading = true;
             this.anomalieTypeList = await getAnomalieTypeApi(this.checkId);
             this.anomalieId = this.anomalieTypeList[0].id;
-            this.getGovernanceDetail()
+            await this.getGovernanceDetail()
+            this.loading = false;
         },
         destory() {
             this.anomalieId = '';
@@ -106,8 +108,10 @@ export default {
             console.log(i, row)
         },
         async getGovernanceDetail() {
+            this.loading = true;
             this.anomalieDetailList = await getAnomalieDetailApi(this.anomalieId)
             this.total = this.anomalieDetailList.length;
+            this.loading = false;
         },
         handleCurrentChange(val) {
             this.currentPage = val;

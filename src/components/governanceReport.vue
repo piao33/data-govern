@@ -1,47 +1,47 @@
 <template>
     <div class="content">
-        <el-dialog title="数据治理报告" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
+        <el-dialog class="dialog-report" title="数据治理报告" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
             width="90%">
-            <div class="header-action">
-                <el-button type="text" @click="showDetail">详情</el-button>
-                <div class="vertical-line"></div>
-                <el-button type="text">已治理数据批量下载</el-button>
-            </div>
-            <el-table :data="governReport" border multipleTable>
-                <el-table-column type="selection" width="50" align="center"></el-table-column>
-                <el-table-column property="name" label="数据项" align="center"></el-table-column>
-                <el-table-column property="rowNum" label="数据行数" align="center"></el-table-column>
-                <el-table-column property="period" label="计算周期" align="center"></el-table-column>
-                <el-table-column property="validityPeriod" label="有效计算期" align="center"></el-table-column>
-                <el-table-column label="空值占比" align="center">
-                    <template slot-scope="scope">
-                        <span>{{ scope.row.nullProportion + '%'}}</span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="异常占比" align="center">
-                    <template slot-scope="scope">
-                        <span>{{ scope.row.anomalieProportion + '%'}}</span>
-                    </template>
-                </el-table-column>
-                <el-table-column property="executionTime" label="执行时间" align="center"></el-table-column>
-                <el-table-column align="center" label="操作" width="100">
-                    <template slot-scope="scope">
-                        <el-button @click="handleClick(scope.$index, scope.row)" type="text">下载</el-button>
-                        <el-button type="text" disabled>修改</el-button>
-                    </template>
-                </el-table-column>
-            </el-table>
-            <div class="line"></div>
-            <div class="anomalie">
-                <div class="anomalie-item" v-for="item in anomalieList" :key="item.id">
-                    <img :src="item.imgurl" alt="">
-                    <div class="info">
-                        <p>{{ item.type }}</p>
-                        <span>{{ item.count }}项</span>
-                    </div>
-                    <el-button class="detail-btn" type="text" @click="showItemDetail(item.id)">详情</el-button>
+                <div class="header-action">
+                    <el-button type="text" @click="showDetail">详情</el-button>
+                    <div class="vertical-line"></div>
+                    <el-button type="text">已治理数据批量下载</el-button>
                 </div>
-            </div>
+                <el-table :data="governReport" border multipleTable>
+                    <el-table-column type="selection" width="50" align="center"></el-table-column>
+                    <el-table-column property="name" label="数据项" align="center"></el-table-column>
+                    <el-table-column property="rowNum" label="数据行数" align="center"></el-table-column>
+                    <el-table-column property="period" label="计算周期" align="center"></el-table-column>
+                    <el-table-column property="validityPeriod" label="有效计算期" align="center"></el-table-column>
+                    <el-table-column label="空值占比" align="center">
+                        <template slot-scope="scope">
+                            <span>{{ scope.row.nullProportion + '%'}}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="异常占比" align="center">
+                        <template slot-scope="scope">
+                            <span>{{ scope.row.anomalieProportion + '%'}}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column property="executionTime" label="执行时间" align="center"></el-table-column>
+                    <el-table-column align="center" label="操作" width="100">
+                        <template slot-scope="scope">
+                            <el-button @click="handleClick(scope.$index, scope.row)" type="text">下载</el-button>
+                            <el-button type="text" disabled>修改</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                <div class="line"></div>
+                <div class="anomalie">
+                    <div class="anomalie-item" v-for="item in anomalieList" :key="item.id">
+                        <img :src="item.imgurl" alt="">
+                        <div class="info">
+                            <p>{{ item.type }}</p>
+                            <span>{{ item.count }}项</span>
+                        </div>
+                        <el-button class="detail-btn" type="text" @click="showItemDetail(item.id)">详情</el-button>
+                    </div>
+                </div>
             <span slot="footer" class="dialog-footer">
                 <el-button @click="confirmVisible = true" type="primary" :plain="true" :round="true">数据确认</el-button>
             </span>
@@ -104,6 +104,7 @@ export default {
     },
     data() {
         return {
+            loading: false,
             detailVisible: false,
             itemDetailVisible: false,
             confirmVisible: false,
@@ -113,9 +114,13 @@ export default {
     },
     methods: {
         async init() {
+            let loadingInstance = this.$loading({
+                target: document.querySelector('.dialog-report .el-dialog'),
+            })
             let {checkList, anomalieList} = await getCheckResultApi(this.checkId);
             this.governReport = checkList;
             this.anomalieList = anomalieList;
+            loadingInstance.close();
         },
         destory() {
             this.governReport = [];
@@ -130,7 +135,6 @@ export default {
         },
         showItemDetail(itemId) {
             // 显示数据异常子项详情
-            console.log(itemId)
             this.itemDetailVisible = true;
         },
         updateDetailVisible(val) {
