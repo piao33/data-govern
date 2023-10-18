@@ -153,8 +153,6 @@ export default {
     margin: 0 20px;
 }
 
-.overview-item .info {}
-
 .overview-item .info p {
     font-size: 14px;
     font-weight: 400;
@@ -164,70 +162,5 @@ export default {
 .overview-item .info span {
     font-size: 16px;
     font-weight: 600;
-}
-
-.detail {
-    display: flex;
-}
-
-#radar {
-    width: 100%;
-    height: 400px;
-}
-
-#scatter {
-    width: 100%;
-    height: 400px;
-}
-
-.radar-box {
-    flex: 1;
-    padding-right: 32px;
-}
-
-.scatter-box {
-    width: 60%;
-}
-
-.detail .title {
-    font-size: 16px;
-    border-bottom: 1px solid #949498;
-    padding: 0 0 8px 12px;
-}
-
-.line {
-    border-top: 1px solid #E7E8E8;
-    margin: 30px 0;
-    position: relative;
-}
-
-.line-total::after {
-    content: '校验情况总览';
-    position: absolute;
-    left: 30px;
-    top: -30px;
-    background-color: #fff;
-    text-align: center;
-    font-size: 16px;
-    color: #5f5f60;
-    font-weight: 500;
-    height: 40px;
-    padding: 10px;
-    line-height: 40px;
-}
-
-.line-detail::after {
-    content: '校验详情';
-    position: absolute;
-    left: 30px;
-    top: -30px;
-    background-color: #fff;
-    text-align: center;
-    font-size: 16px;
-    color: #5f5f60;
-    font-weight: 500;
-    height: 40px;
-    padding: 10px;
-    line-height: 40px;
 }
 </style>

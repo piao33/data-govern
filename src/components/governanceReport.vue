@@ -187,8 +187,6 @@ export default {
     margin: 0 20px;
 }
 
-.anomalie-item .info {}
-
 .anomalie-item .info p {
     font-size: 14px;
     font-weight: 400;
@@ -206,20 +204,6 @@ export default {
     bottom: 0;
     padding: 5px;
 }
-
-.formbtn-box {
-    text-align: right;
-}
-
-.tablebtn-box {
-    margin: 0 0 20px 12px;
-}
-
-.btn {
-    width: 120px;
-    margin-right: 20px;
-}
-
 .line {
     border-top: 1px solid #E7E8E8;
     margin: 30px 0;
@@ -239,12 +223,5 @@ export default {
     height: 40px;
     padding: 10px;
     line-height: 40px;
-}
-
-.govern-btn {
-    position: fixed;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
 }
 </style>

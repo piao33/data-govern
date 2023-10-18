@@ -273,8 +273,6 @@ export default {
     margin: 0 20px;
 }
 
-.overview-item .info {}
-
 .overview-item .info p {
     font-size: 14px;
     font-weight: 400;
