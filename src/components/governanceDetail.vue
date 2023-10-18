@@ -1,10 +1,10 @@
 <template>
     <div class="content">
-        <el-dialog title="" :visible.sync="showDialog" @closed="coolo" :close-on-press-escape="false" :close-on-click-modal="false"
+        <el-dialog title="" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
             width="90%">
             <div class="header">
                 <h2>数据治理报告</h2>
-                <span>创建时间：2023-4-22 18:23:31</span>
+                <span>创建时间：{{createTime}}</span>
             </div>
             <div class="line line-total"></div>
 
@@ -13,7 +13,7 @@
                     <img :src="item.img" alt="">
                     <div class="info">
                         <p>{{ item.name }}</p>
-                        <span>{{ item.count }}项</span>
+                        <span>{{ item.count }}</span>
                     </div>
                 </li>
             </ul>
@@ -36,6 +36,7 @@
 </template>
 
 <script>
+import { getReportOverviewApi } from '../api/index.js'
 import anomalieImg from '/src/assets/data.png'
 export default {
     name: 'governanceDetail',
@@ -43,6 +44,10 @@ export default {
         visible: {
             type: Boolean,
             default: false
+        },
+        checkId: {
+            type: [Number, String],
+            default: ''
         }
     },
     computed: {
@@ -56,60 +61,43 @@ export default {
         }
     },
     beforeDestroy() {
-        this.radarChart && this.$echarts.dispose(this.radarChart)
-        this.scatterChart && this.$echarts.dispose(this.scatterChart)
+        
     },
     watch: {
-        async visible(val) {
-            if (val) {
-                await this.$nextTick()
-                this.initRadar();
-                this.initScatter();
-            }
+        visible: {
+            handler(val) {
+                if(val) {
+                    this.init();
+                }
+            },
+            immediate: true
         }
     },
     data() {
         return {
             radarChart: null,
             scatterChart: null,
-            dataOverview: [
-                {
-                    id: 1,
-                    name: '数据表总数',
-                    img: anomalieImg,
-                    count: 3,
-                },
-                {
-                    id: 2,
-                    name: '数据行数',
-                    img: anomalieImg,
-                    count: 43000,
-                },
-                {
-                    id: 3,
-                    name: '数据异常表数',
-                    img: anomalieImg,
-                    count: 3,
-                },
-                {
-                    id: 4,
-                    name: '数据异常项数',
-                    img: anomalieImg,
-                    count: 342,
-                },
-                {
-                    id: 5,
-                    name: '数据缺失项数',
-                    img: anomalieImg,
-                    count: 162,
-                }
-            ],
+            createTime: '',
+            dataOverview: [],
         }
     },
     methods: {
+        async init() {
+            let {overview, createTime} = await getReportOverviewApi(this.checkId);
+            this.dataOverview = overview;
+            this.createTime = createTime;
+            await this.$nextTick()
+            this.initRadar();
+            this.initScatter();
+        },
+        destory() {
+            this.dataOverview = [];
+            this.createTime = '';
+            this.radarChart && this.$echarts.dispose(this.radarChart)
+            this.scatterChart && this.$echarts.dispose(this.scatterChart)
+        },
         initRadar() {
             var chartDom = document.getElementById('radar');
-            console.log(chartDom)
             this.radarChart = this.$echarts.init(chartDom);
             var option;
 
@@ -130,7 +118,7 @@ export default {
                         { name: '数据异常7' },
                         { name: '数据异常8' },
                         { name: '数据异常9' },
-                    ]
+                    ].slice(0,parseInt(Math.random() * 3) + 8)
                 },
                 axisTick: {
                     show: true,
@@ -156,7 +144,7 @@ export default {
                         },
                         data: [
                             {
-                                value: [24, 3, 20, 35, 50, 18, 23, 23, 20, 35],
+                                value: [24, 3, 20, 35, 50, 18, 23, 23, 20, 35].slice(0,parseInt(Math.random() * 3) + 8),
                             }
                         ]
                     }
@@ -170,13 +158,14 @@ export default {
             this.scatterChart = this.$echarts.init(chartDom);
             var option;
 
-            const nameList = [
+            const xAxisData = [
                 '边配电站1', '边配电站2', '边配电站3', '边配电站4', '边配电站5', '边配电站6', '边配电站7'
-            ];
-            const anomalieList = [
+            ].slice(0, parseInt(Math.random() * 3) + 5);
+            const yAxisData = [
                 '数据缺失', '数据异常1', '数据异常2', '数据异常3', '数据异常4', '数据异常5'
-            ];
+            ].slice(0, parseInt(Math.random() * 3) + 4);
             const color = ['#b5d8ef', '#a4e3b4','#aeece0','#f3e6b8','#f4cdf0', '#d9ed7a', '#bab6d3'];
+            let len = xAxisData.length * yAxisData.length;
             const data = [
                 [0, 0, 5], [1, 0, 1], [2, 0, 7], [3 , 0, 3], [4, 0, 0], [5, 0, 4], [6, 0, 4],
                 [0, 1, 4], [1, 1, 2], [2, 1, 12], [3 , 1, 2], [4, 1, 2], [5, 1, 6], [6, 1, 12],
@@ -184,13 +173,13 @@ export default {
                 [0, 3, 7], [1, 3, 9], [2, 3, 0], [3 , 3, 2], [4, 3, 5], [5, 3, 2], [6, 3, 5],
                 [0, 4, 2], [1, 4, 2], [2, 4, 6], [3 , 4, 4], [4, 4, 1], [5, 4, 4], [6, 4, 1],
                 [0, 5, 8], [1, 5, 7], [2, 5, 8], [3 , 5, 6], [4, 5, 8], [5, 5, 9], [6, 5, 7],
-            ]
+            ].slice(0, len);
             option = {
                 tooltip: {
                     position: 'top',
                     formatter: function (params) {
                         return (
-                            `${nameList[params.value[0]]}： ${anomalieList[params.value[1]]} 的数量为 ${params.value[2]}`
+                            `${xAxisData[params.value[0]]}： ${yAxisData[params.value[1]]} 的数量为 ${params.value[2]}`
                         );
                     }
                 },
@@ -203,7 +192,7 @@ export default {
                 },
                 xAxis: {
                     type: 'category',
-                    data: nameList,
+                    data: xAxisData,
                     boundaryGap: false,
                     splitLine: {
                         show: true
@@ -214,7 +203,7 @@ export default {
                 },
                 yAxis: {
                     type: 'category',
-                    data: anomalieList,
+                    data: yAxisData,
                     axisLine: {
                         show: false
                     }
@@ -240,9 +229,6 @@ export default {
 
             option && this.scatterChart.setOption(option);
         },
-        coolo(){
-            console.log('onclose')
-        }
     }
 }
 </script>

@@ -1,6 +1,6 @@
 <template>
     <div class="content">
-        <el-dialog title="数据治理报告" :visible.sync="showDialog" :close-on-press-escape="false" :close-on-click-modal="false"
+        <el-dialog title="数据治理报告" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
             width="90%">
             <div class="header-action">
                 <el-button type="text" @click="showDetail">详情</el-button>
@@ -9,11 +9,20 @@
             </div>
             <el-table :data="governReport" border multipleTable>
                 <el-table-column type="selection" width="50" align="center"></el-table-column>
-                <el-table-column property="rowNum" label="数据行数" width="280" align="center"></el-table-column>
+                <el-table-column property="name" label="数据项" align="center"></el-table-column>
+                <el-table-column property="rowNum" label="数据行数" align="center"></el-table-column>
                 <el-table-column property="period" label="计算周期" align="center"></el-table-column>
                 <el-table-column property="validityPeriod" label="有效计算期" align="center"></el-table-column>
-                <el-table-column property="nullProportion" label="空值占比" align="center"></el-table-column>
-                <el-table-column property="anomalieProportion" label="异常占比" align="center"></el-table-column>
+                <el-table-column label="空值占比" align="center">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.nullProportion + '%'}}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="异常占比" align="center">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.anomalieProportion + '%'}}</span>
+                    </template>
+                </el-table-column>
                 <el-table-column property="executionTime" label="执行时间" align="center"></el-table-column>
                 <el-table-column align="center" label="操作" width="100">
                     <template slot-scope="scope">
@@ -25,9 +34,9 @@
             <div class="line"></div>
             <div class="anomalie">
                 <div class="anomalie-item" v-for="item in anomalieList" :key="item.id">
-                    <img :src="item.img" alt="">
+                    <img :src="item.imgurl" alt="">
                     <div class="info">
-                        <p>{{ item.name }}</p>
+                        <p>{{ item.type }}</p>
                         <span>{{ item.count }}项</span>
                     </div>
                     <el-button class="detail-btn" type="text" @click="showItemDetail(item.id)">详情</el-button>
@@ -38,9 +47,9 @@
             </span>
         </el-dialog>
 
-        <governance-detail :visible="detailVisible" @updateVisible="updateDetailVisible"></governance-detail>
+        <governance-detail :checkId="checkId" :visible="detailVisible" @updateVisible="updateDetailVisible"></governance-detail>
 
-        <governance-item-detail :visible="itemDetailVisible" @updateVisible="updateItemDetailVisible"></governance-item-detail>
+        <governance-item-detail :checkId="checkId" :visible="itemDetailVisible" @updateVisible="updateItemDetailVisible"></governance-item-detail>
         
         <el-dialog title="提 示" :visible.sync="confirmVisible" width="30%" center>
             <h2 style="text-align: center">是否确认使用该治理数据？</h2>
@@ -53,9 +62,10 @@
 </template>
 
 <script>
-import anomalieImg from '/src/assets/data.png'
+import { getCheckResultApi } from '../api/index.js'
 import governanceDetail from '/src/components/governanceDetail'
 import governanceItemDetail from '/src/components/governanceItemDetail'
+
 export default {
     name: 'governanceReport',
     components: {
@@ -66,6 +76,20 @@ export default {
         visible: {
             type: Boolean,
             default: false
+        },
+        checkId: {
+            type: [Number, String],
+            default: '',
+        }
+    },
+    watch: {
+        visible: {
+            handler(val) {
+                if(val) {
+                    this.init();
+                }
+            },
+            immediate: true
         }
     },
     computed: {
@@ -83,81 +107,20 @@ export default {
             detailVisible: false,
             itemDetailVisible: false,
             confirmVisible: false,
-            anomalieList: [
-                {
-                    id: 1,
-                    name: '数据缺失',
-                    img: anomalieImg,
-                    count: 20,
-                },
-                {
-                    id: 2,
-                    name: '数据异常1',
-                    img: anomalieImg,
-                    count: 12,
-                },
-                {
-                    id: 3,
-                    name: '数据异常2',
-                    img: anomalieImg,
-                    count: 4,
-                },
-                {
-                    id: 4,
-                    name: '数据异常2',
-                    img: anomalieImg,
-                    count: 4,
-                },
-                {
-                    id: 5,
-                    name: '数据异常2',
-                    img: anomalieImg,
-                    count: 4,
-                },
-                {
-                    id: 6,
-                    name: '数据异常2',
-                    img: anomalieImg,
-                    count: 4,
-                },
-                {
-                    id: 7,
-                    name: '数据异常2',
-                    img: anomalieImg,
-                    count: 4,
-                },
-                {
-                    id: 8,
-                    name: '数据异常2',
-                    img: anomalieImg,
-                    count: 4,
-                },
-            ],
-            governReport: [{
-                rowNum: '当季光伏典型出力1',
-                period: '120',
-                validityPeriod: '110',
-                nullProportion: '4%',
-                anomalieProportion: '3%',
-                executionTime: '2016-10-02 12:00:00'
-            }, {
-                rowNum: '当季光伏典型出力2',
-                period: '120',
-                validityPeriod: '110',
-                nullProportion: '4%',
-                anomalieProportion: '3%',
-                executionTime: '2016-10-02 12:00:00'
-            }, {
-                rowNum: '当季光伏典型出力3',
-                period: '120',
-                validityPeriod: '110',
-                nullProportion: '4%',
-                anomalieProportion: '3%',
-                executionTime: '2016-10-02 12:00:00'
-            }],
+            anomalieList: [],
+            governReport: [],
         }
     },
     methods: {
+        async init() {
+            let {checkList, anomalieList} = await getCheckResultApi(this.checkId);
+            this.governReport = checkList;
+            this.anomalieList = anomalieList;
+        },
+        destory() {
+            this.governReport = [];
+            this.anomalieList = [];
+        },
         handleClick(i, row) {
             console.log(i, row)
         },
@@ -218,6 +181,8 @@ export default {
 
 .anomalie-item img {
     width: 48px;
+    height: 48px;
+    object-fit: cover;
     vertical-align: top;
     margin: 0 20px;
 }

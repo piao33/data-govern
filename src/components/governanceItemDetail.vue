@@ -1,15 +1,14 @@
 <template>
     <div class="content">
-        <el-dialog title="检测详情" :visible.sync="showDialog" :close-on-press-escape="false" :close-on-click-modal="false"
+        <el-dialog title="检测详情" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
             width="60%">
             <div class="desc">
                 说明：数据缺失是指数据存在一个时间点或者连续时间点的数据缺失情况
             </div>
 
             <div style="margin: 12px 0;">
-                <el-select v-model="anomalieType" size="mini" placeholder="异常类型">
-                    <el-option label="数据缺失" :value="0"></el-option>
-                    <el-option label="数据异常" :value="1"></el-option>
+                <el-select v-model="anomalieId" size="mini" placeholder="异常类型">
+                    <el-option :label="item.type" :value="item.id" v-for="item in anomalieTypeList" :key="item.id"></el-option>
                 </el-select>
                 <el-button style="margin-left: 20px;" type="primary" size="mini" @click="getGovernanceDetail">查询</el-button>
             </div>
@@ -37,12 +36,17 @@
 </template>
 
 <script>
+import { getAnomalieTypeApi, getAnomalieDetailApi } from '../api/index.js'
 export default {
     name: 'governanceItemDetail',
     props: {
         visible: {
             type: Boolean,
             default: false
+        },
+        checkId: {
+            type: [Number, String],
+            default: ''
         }
     },
     computed: {
@@ -55,68 +59,47 @@ export default {
             }
         }
     },
-    beforeDestroy() {
-        this.$echarts.dispose(this.radarChart)
-    },
+
     watch: {
-        async visible(val) {
-            if (val) {
-                await this.$nextTick()
-            }
+        visible: {
+            handler(val) {
+                if(val) {
+                    this.init();
+                }
+            },
+            immediate: true
         }
     },
     data() {
         return {
-            anomalieType: '',
+            anomalieId: '',
+            anomalieTypeList: [],
             governanceDetailTable: [],
+            governanceDetail: [],
             currentPage: 1,
             pageSize: 10,
             total: 0,
-            governanceDetail: [{
-                value: 0,
-                name: '当季光伏典型出力',
-                info: '{"有问题数据"}',
-                type: '单数据点缺失',
-                time: '2023-10-17 14:06:32',
-                status: '已填充',
-            }, {
-                value: 0,
-                name: '变配电站负荷',
-                info: '{"有问题数据"}',
-                type: '多数据点缺失',
-                time: '2023-10-17 14:06:32',
-                status: '已填充',
-            }, {
-                value: 1,
-                name: '光伏典型出力',
-                info: '{"有问题数据"}',
-                type: '多数据点异常',
-                time: '2023-10-17 14:06:32',
-                status: '已删除',
-            }, {
-                value: 0,
-                name: '变配电站负荷',
-                info: '{"有问题数据"}',
-                type: '单数据点缺失',
-                time: '2023-10-17 14:06:32',
-                status: '已填充',
-            }, {
-                value: 1,
-                name: '当季光伏典型出力2',
-                info: '{"有问题数据"}',
-                type: '单数据点异常',
-                time: '2023-10-17 14:06:32',
-                status: '已填充',
-            }],
         }
     },
     methods: {
+        async init() {
+            this.anomalieTypeList = await getAnomalieTypeApi(this.checkId);
+            this.anomalieId = this.anomalieTypeList[0].id;
+            this.getGovernanceDetail()
+        },
+        destory() {
+            this.anomalieId = '';
+            this.anomalieTypeList = [];
+            this.governanceDetailTable = [];
+            this.total = 0;
+            this.currentPage = 1;
+            this.pageSize = 10;
+        },
         handleClick(i, row) {
             console.log(i, row)
         },
-        getGovernanceDetail() {
-            console.log(this.anomalieType)
-            this.governanceDetailTable = this.governanceDetail.filter(item => item.value === this.anomalieType)
+        async getGovernanceDetail() {
+            this.governanceDetailTable = await getAnomalieDetailApi(this.anomalieId)
             this.total = this.governanceDetailTable.length;
         },
         handleSizeChange() {
