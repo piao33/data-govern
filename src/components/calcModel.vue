@@ -6,6 +6,7 @@
             :close-on-press-escape="false"	
             :close-on-click-modal="false"	
             @closed="destory"
+            top="5vh"
             width="90%"
         >
             <el-form :model="form" label-position="right" v-loading="loading_form">
@@ -180,6 +181,9 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
+.content /deep/ .el-dialog__body{
+    padding-top: 10px;
+}
 .formbtn-box{
     text-align: right;
 }

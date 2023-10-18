@@ -1,7 +1,7 @@
 <template>
     <div class="content">
-        <el-dialog title="检测详情" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
-            width="60%">
+        <el-dialog title="检测详情" top="5vh" :append-to-body="true" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
+            width="80%">
             <div class="desc">
                 说明：数据缺失是指数据存在一个时间点或者连续时间点的数据缺失情况
             </div>
@@ -121,6 +121,10 @@ export default {
 </script>
 
 <style scoped>
+div /deep/ .el-dialog__body{
+    padding-top: 0;
+}
+
 .pagination {
     text-align: center;
     margin-top: 16px;

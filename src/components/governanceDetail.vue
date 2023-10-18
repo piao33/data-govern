@@ -1,6 +1,12 @@
 <template>
     <div class="content">
-        <el-dialog title="" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
+        <el-dialog title="" 
+            :visible.sync="showDialog" 
+            @closed="destory" 
+            :close-on-press-escape="false"
+            :close-on-click-modal="false"
+            :append-to-body="true"
+            top="5vh"
             width="90%">
             <div v-loading="loading">
                 <div class="header">
@@ -237,6 +243,9 @@ export default {
 </script>
 
 <style scoped>
+div /deep/ .el-dialog__body{
+    padding-top: 0;
+}
 .header {
     text-align: center;
 }

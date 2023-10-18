@@ -1,6 +1,6 @@
 <template>
     <div class="content">
-        <el-dialog class="dialog-report" title="数据治理报告" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
+        <el-dialog class="dialog-report" top="5vh" :append-to-body="true" title="数据治理报告" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
             width="90%">
                 <div class="header-action">
                     <el-button type="text" @click="showDetail">详情</el-button>
@@ -51,7 +51,7 @@
 
         <governance-item-detail :checkId="checkId" :visible="itemDetailVisible" @updateVisible="updateItemDetailVisible"></governance-item-detail>
         
-        <el-dialog title="提 示" :visible.sync="confirmVisible" width="30%" center>
+        <el-dialog title="提 示" :append-to-body="true" :visible.sync="confirmVisible" width="30%" center>
             <h2 style="text-align: center">是否确认使用该治理数据？</h2>
             <span slot="footer" class="dialog-footer">
                 <el-button type="primary" @click="confirmVisible = false">确 认</el-button>
@@ -160,8 +160,7 @@ export default {
     margin: 0 8px;
     height: 14px;
 }
-
-.content /deep/.el-dialog__body {
+div /deep/.el-dialog__body {
     padding-top: 0;
 }
 
