@@ -50,14 +50,14 @@
                 </el-row>
             </el-form>
             <div class="formbtn-box">
-                <el-button class="btn" type="primary" @click="close">保存</el-button>
-                <el-button class="btn" type="primary" @click="close">评估</el-button>
+                <el-button class="large-btn-120 right20" type="primary" @click="close">保存</el-button>
+                <el-button class="large-btn-120 right20" type="primary" @click="close">评估</el-button>
             </div>
             <div class="line"></div>
             <div class="tablebtn-box">
-                <el-button class="btn" type="primary" @click="close">批量校验</el-button>
-                <el-button class="btn" type="primary" @click="close">批量导出</el-button>
-                <el-button class="btn" type="primary" @click="close">批量删除</el-button>
+                <el-button class="large-btn-120 right20" type="primary" @click="close">批量校验</el-button>
+                <el-button class="large-btn-120 right20" type="primary" @click="close">批量导出</el-button>
+                <el-button class="large-btn-120 right20" type="primary" @click="close">批量删除</el-button>
             </div>
             <el-table :data="templateTable" border multipleTable v-loading="loading_table">
                 <el-table-column type="selection" width="50" align="center"></el-table-column>
@@ -79,6 +79,48 @@
                     </template>
                 </el-table-column>
             </el-table>
+        </el-dialog>
+
+        <el-dialog
+            title="检验文件导入" 
+            :visible.sync="importVisible" 
+            :close-on-press-escape="false"	
+            :close-on-click-modal="false"	
+            @closed="handleRemove"
+            top="30vh"
+            width="80%"
+        >   
+            <div class="import">
+                <span>请选择导入文件：</span>
+                <div class="pathbox">
+                    <el-tooltip :open-delay="300" :disabled="!filePath" effect="dark" :content="filePath" placement="top">
+                        <p>{{ filePath }}</p>
+                    </el-tooltip>
+                    <i @click="handleRemove" class="el-icon-circle-close" style="color: #0071B7" v-show="filePath"></i>
+                </div>
+                <el-upload
+                    class="upload-demo"
+                    ref="upload"
+                    action="https://jsonplaceholder.typicode.com/posts/"
+                    :multiple="false"
+                    :show-file-list="false"
+                    :on-change="handleChange"
+                    :on-error="handleError"
+                    :on-success="handleSuccess"
+                    :limit="1"
+                    :on-exceed="handleExceed"
+                    :auto-upload="false"
+                >
+                    <el-button slot="trigger" class="large-btn-120">浏览</el-button>
+                    <el-button style="margin: 0 20px;" @click="submitUpload" class="large-btn-120" type="primary">导入</el-button>
+                </el-upload>
+                <el-tooltip :open-delay="300" effect="dark" content="数据生成模板提示语" placement="top">
+                    <div>
+                        <el-button type="text">数据生成模板</el-button>
+                        <i class="el-icon-question" style="color: #0071B7"></i>
+                    </div>
+                </el-tooltip>
+            </div>
         </el-dialog>
 
         <governance-report :checkId="checkId" :visible="reportVisible" @updateVisible="updateVisible"></governance-report>
@@ -124,9 +166,11 @@ export default {
             loading_form: false,
             loading_table: false,
             reportVisible: false,
+            importVisible: false,
             modelList: [],
             templateTable: [],
             checkId: '',
+            filePath: '',
             form: {
                 name: '',
                 modelId: '',
@@ -162,6 +206,7 @@ export default {
         },
         handleClick(i, row) {
             console.log(i, row)
+            this.importVisible = true;
         },
         updateVisible(val) {
             this.reportVisible = val;
@@ -174,7 +219,29 @@ export default {
         checkData(id) {
             this.checkId = id;
             this.reportVisible = true;
-        }
+        },
+
+        submitUpload() {
+            this.$refs.upload.submit();
+        },
+        handleChange(file, fileList) {
+            this.filePath = file.name;
+        },
+        handleExceed(files) {
+            this.$message.warning(`限制导入 1 个文件，请先清空选择的文件后再操作`);
+        },
+        handleRemove() {
+            console.log('remove')
+            this.$refs.upload.clearFiles();
+            this.filePath = '';
+        },
+        handleError( err) {
+            console.log(err)
+            this.$message.error(`导入失败`);
+        },
+        handleSuccess() {
+            this.$message.success(`导入成功`);
+        },
     },
 }
 </script>
@@ -190,12 +257,49 @@ export default {
 .tablebtn-box{
     margin: 0 0 20px 12px;
 }
-.btn{
+.large-btn-120{
     width: 120px;
+}
+.right20{
     margin-right: 20px;
 }
 .line{
     border-top: 1px solid #5f5f60;
     margin: 20px 0;
+}
+
+.import{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.import span{
+    color: #5f5f60;
+    font-size: 16px;
+    font-weight: bold;
+}
+    
+.pathbox{
+    border: 1px solid #DCDFE6;
+    height: 40px;
+    width: 40%;
+    margin: 0 30px 0 24px;
+    box-sizing: border-box;
+    position: relative;
+    padding: 0 16px;
+}
+.pathbox p{
+    line-height: 40px;
+    height: 100%;
+    overflow: hidden;
+    display: inline-block;
+}
+
+.pathbox i{
+    color: rgb(0, 113, 183);
+    position: absolute;
+    right: 4px;
+    top: 20px;
+    transform: translateY(-50%);
 }
 </style>
