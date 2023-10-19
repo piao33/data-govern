@@ -32,6 +32,15 @@
                     </el-table-column>
                 </el-table>
                 <div class="line"></div>
+                <el-tooltip :open-delay="300" class="desc-tooltip" effect="light" :hide-after="0" placement="right">
+                    <div slot="content">
+                        <div v-for="(item,index) in anomalieDesc" :key="index" class="tooltip-item">
+                            <i class="el-icon-caret-right" style="color: #0071B7"></i>
+                            {{ item }}
+                        </div>
+                    </div>
+                    <el-button type="text">数据异常情况说明<i class="el-icon-warning-outline"></i></el-button>
+                </el-tooltip>
                 <div class="anomalie">
                     <div class="anomalie-item" v-for="item in anomalieList" :key="item.id">
                         <img :src="item.imgurl" alt="">
@@ -110,6 +119,16 @@ export default {
             confirmVisible: false,
             anomalieList: [],
             governReport: [],
+            anomalieDesc: [
+                '数据缺失：是指数据存在单点或者连续点的数据缺失情况',
+                '数据异常1：是指变电站负载功率运行数据范围异常',
+                '数据异常2：是指风电、生物质、日间光伏电厂（站）电站出力功率运行数据范围异常',
+                '数据异常3：是指夜间光伏电厂（站）出力运行数据范围异常',
+                '数据异常4：是指主变并列运行设备运行数据范围异常',
+                '数据异常5：是指主变交替运行设备运行数据范围异常',
+                '数据异常6：是指主变交替运行设备运行数据范围连续异常',
+                '数据异常7：是指运行数据出现连续恒定不变异常',
+            ]
         }
     },
     methods: {
@@ -233,4 +252,15 @@ div /deep/.el-dialog__body {
     padding: 10px;
     line-height: 40px;
 }
+
+.desc-tooltip{
+    padding: 0 0 0 40px;
+    transform: translateY(-10px);
+}
+.tooltip-item{
+    margin: 8px 0;
+    font-size: 14px;
+    color: #5f5f60;
+}
 </style>
+

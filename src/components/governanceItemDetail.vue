@@ -7,7 +7,7 @@
             </div>
 
             <div style="margin: 12px 0;" >
-                <el-select v-model="anomalieId" size="mini" placeholder="异常类型">
+                <el-select v-model="anomalieIds" style="width: 300px" multiple size="mini" placeholder="异常类型">
                     <el-option :label="item.type" :value="item.id" v-for="item in anomalieTypeList" :key="item.id"></el-option>
                 </el-select>
                 <el-button style="margin-left: 20px;" type="primary" size="mini" @click="getGovernanceDetail">查询</el-button>
@@ -21,6 +21,7 @@
                 </el-table-column>
                 <el-table-column property="name" label="数据表" align="center"></el-table-column>
                 <el-table-column property="info" label="数据信息" align="center"></el-table-column>
+                <el-table-column property="parameter" label="异常字段" align="center"></el-table-column>
                 <el-table-column property="type" label="异常类型" align="center"></el-table-column>
                 <el-table-column property="time" label="检测时间" align="center"></el-table-column>
                 <el-table-column label="处理状态" align="center" width="80">
@@ -79,7 +80,7 @@ export default {
     data() {
         return {
             loading: false,
-            anomalieId: '',
+            anomalieIds: [],
             anomalieTypeList: [],
             anomalieDetailList: [],
             governanceDetail: [],
@@ -92,12 +93,12 @@ export default {
         async init() {
             this.loading = true;
             this.anomalieTypeList = await getAnomalieTypeApi(this.checkId);
-            this.anomalieId = this.anomalieTypeList[0].id;
+            this.anomalieIds.push(this.anomalieTypeList[0].id);
             await this.getGovernanceDetail()
             this.loading = false;
         },
         destory() {
-            this.anomalieId = '';
+            this.anomalieIds = [];
             this.anomalieTypeList = [];
             this.anomalieDetailList = [];
             this.total = 0;
@@ -109,7 +110,7 @@ export default {
         },
         async getGovernanceDetail() {
             this.loading = true;
-            this.anomalieDetailList = await getAnomalieDetailApi(this.anomalieId)
+            this.anomalieDetailList = await getAnomalieDetailApi(this.anomalieIds)
             this.total = this.anomalieDetailList.length;
             this.loading = false;
         },
