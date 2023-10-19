@@ -116,10 +116,16 @@ export default {
         async init() {
             let loadingInstance = this.$loading({
                 target: document.querySelector('.dialog-report .el-dialog'),
+                lock: true,
+                text: '数据治理校验中',
+                spinner: 'el-icon-loading',
+                background: 'rgba(255, 255, 255, 1)',
             })
             let {checkList, anomalieList} = await getCheckResultApi(this.checkId);
             this.governReport = checkList;
-            this.anomalieList = anomalieList;
+            this.anomalieList = anomalieList.sort((a,b)=> {
+                return b.count - a.count
+            });
             loadingInstance.close();
         },
         destory() {
