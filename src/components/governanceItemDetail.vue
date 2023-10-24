@@ -7,8 +7,21 @@
             </div>
 
             <div style="margin: 12px 0;" >
-                <el-select v-model="anomalieIds" style="width: 300px" multiple size="mini" placeholder="异常类型">
+                <!-- <el-select v-model="anomalieIds" style="width: 300px" multiple size="mini" placeholder="异常类型">
                     <el-option :label="item.type" :value="item.id" v-for="item in anomalieTypeList" :key="item.id"></el-option>
+                </el-select> -->
+                <el-select v-model="anomalieIds" style="width: 300px" multiple size="mini" placeholder="异常类型">
+                    <el-option-group
+                        v-for="group in options"
+                        :key="group.label"
+                        :label="group.label">
+                        <el-option
+                            v-for="item in group.options"
+                            :key="item.type"
+                            :label="item.label"
+                            :value="item.id">
+                        </el-option>
+                    </el-option-group>
                 </el-select>
                 <el-button style="margin-left: 20px;" type="primary" size="mini" @click="getGovernanceDetail">查询</el-button>
             </div>
@@ -80,10 +93,18 @@ export default {
     data() {
         return {
             loading: false,
+            options: [
+                {
+                    label: '异常类型',
+                    options: []
+                },
+                {
+                    label: '异常字段',
+                    options: []
+                }
+            ],
             anomalieIds: [],
-            anomalieTypeList: [],
             anomalieDetailList: [],
-            governanceDetail: [],
             currentPage: 1,
             pageSize: 10,
             total: 0,
@@ -92,14 +113,25 @@ export default {
     methods: {
         async init() {
             this.loading = true;
-            this.anomalieTypeList = await getAnomalieTypeApi(this.checkId);
-            this.anomalieIds.push(this.anomalieTypeList[0].id);
+            let {anomalieType, parameters} = await getAnomalieTypeApi(this.checkId);
+            this.options[0].options = anomalieType;
+            this.options[1].options = parameters;
+
             await this.getGovernanceDetail()
             this.loading = false;
         },
         destory() {
             this.anomalieIds = [];
-            this.anomalieTypeList = [];
+            this.options = [
+                {
+                    label: '异常类型',
+                    options: []
+                },
+                {
+                    label: '异常字段',
+                    options: []
+                }
+            ];
             this.anomalieDetailList = [];
             this.total = 0;
             this.currentPage = 1;
@@ -109,6 +141,7 @@ export default {
             console.log(i, row)
         },
         async getGovernanceDetail() {
+            console.log(this.anomalieIds)
             this.loading = true;
             this.anomalieDetailList = await getAnomalieDetailApi(this.anomalieIds)
             this.total = this.anomalieDetailList.length;
