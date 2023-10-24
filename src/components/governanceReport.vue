@@ -63,8 +63,8 @@
         <el-dialog title="提 示" :append-to-body="true" :visible.sync="confirmVisible" width="30%" center>
             <h2 style="text-align: center">是否确认使用该治理数据？</h2>
             <span slot="footer" class="dialog-footer">
-                <el-button type="primary" @click="confirmVisible = false">确 认</el-button>
-                <el-button @click="confirmVisible = false">取 消</el-button>
+                <el-button type="primary" @click="confirmData">确 认</el-button>
+                <el-button @click="confirmData">取 消</el-button>
             </span>
         </el-dialog>
     </div>
@@ -167,6 +167,10 @@ export default {
         },
         updateItemDetailVisible(val) {
             this.itemDetailVisible = val;
+        },
+        confirmData() {
+            this.confirmVisible = false;
+            this.showDialog = false;
         }
     }
 }

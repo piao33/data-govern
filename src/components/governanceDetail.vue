@@ -418,9 +418,9 @@ export default {
             let dom = document.getElementById('dom2image');
             domtoimage.toPng(dom, {bgcolor: '#ffffff'})
                 .then((dataUrl)=>{
-                    let img = new Image();
-                    img.src = dataUrl;
-                    dom.appendChild(img);
+                    // let img = new Image();
+                    // img.src = dataUrl;
+                    // dom.appendChild(img);
 
                     this.savePdf(dataUrl, dom.clientWidth, dom.clientHeight);
                 })
@@ -438,9 +438,9 @@ export default {
             html2canvas(dom, {useCORS: true, dpi: 300, background: '#ffffff'})
                 .then(canvas => {
                     const dataUrl = canvas.toDataURL("image/jpeg");
-                    let img = new Image();
-                    img.src = dataUrl;
-                    dom.appendChild(img);
+                    // let img = new Image();
+                    // img.src = dataUrl;
+                    // dom.appendChild(img);
 
                     this.savePdf(dataUrl,  dom.clientWidth, dom.clientHeight);
                 })
