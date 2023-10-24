@@ -7,9 +7,6 @@
             </div>
 
             <div style="margin: 12px 0;" >
-                <!-- <el-select v-model="anomalieIds" style="width: 300px" multiple size="mini" placeholder="异常类型">
-                    <el-option :label="item.type" :value="item.id" v-for="item in anomalieTypeList" :key="item.id"></el-option>
-                </el-select> -->
                 <el-select v-model="anomalieIds" style="width: 300px" multiple size="mini" placeholder="异常类型">
                     <el-option-group
                         v-for="group in options"
