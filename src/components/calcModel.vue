@@ -32,14 +32,19 @@
                 <el-row>
                     <el-col :span="8">
                         <el-form-item label="计算期:" label-width="100px">
-                            <el-date-picker
-                                style="width: 100%"
-                                v-model="form.period"
-                                type="monthrange"
-                                range-separator="至"
-                                start-placeholder="开始月份"
-                                end-placeholder="结束月份">
-                            </el-date-picker>
+                            <el-col :span="12">
+                                <el-date-picker
+                                    style="width: 100%"
+                                    v-model="form.year"
+                                    type="year"
+                                    placeholder="年份">
+                                </el-date-picker>
+                            </el-col>
+                            <el-col :span="11" :offset="1">
+                                <el-select v-model="form.quarter" placeholder="季节">
+                                    <el-option :label="item" :value="item" v-for="item in ['春季','夏季','秋季','冬季']" :key="item"></el-option>
+                                </el-select>
+                            </el-col>
                         </el-form-item>
                     </el-col>
                     <el-col :span="8">
@@ -75,7 +80,7 @@
                     label="操作"
                     width="200">
                     <template slot-scope="scope">
-                        <el-button :disabled="isChecking" @click="handleClick(scope.$index, scope.row)" type="text">导入</el-button>
+                        <el-button :disabled="isChecking" @click="showImprtDialog(scope.$index, scope.row)" type="text">导入</el-button>
                         <el-button :disabled="isChecking" type="text" @click="checkData">校验</el-button>
                         <el-button :disabled="isChecking" type="text">导出</el-button>
                         <el-button :disabled="isChecking" type="text" @click="showDeleteDialog(scope.row.id)">删除</el-button>
@@ -91,22 +96,27 @@
             :close-on-click-modal="false"	
             @closed="handleRemove"
             top="30vh"
-            width="80%"
+            width="500px"
         >   
-            <div class="import">
-                <span>请选择导入文件：</span>
+            <el-tooltip :open-delay="300" effect="dark" content="数据生成模板提示语" placement="top">
+                <el-button type="text">
+                    数据生成模板
+                    <i class="el-icon-question" style="color: #0071B7"></i>
+                </el-button>
+            </el-tooltip>
+
+                <!-- <span>请选择导入文件：</span>
                 <div class="pathbox">
                     <el-tooltip :open-delay="300" :disabled="!filePath" effect="dark" :content="filePath" placement="top">
                         <p>{{ filePath }}</p>
                     </el-tooltip>
                     <i @click="handleRemove" class="el-icon-circle-close" style="color: #0071B7" v-show="filePath"></i>
-                </div>
+                </div> -->
                 <el-upload
-                    class="upload-demo"
+                    class="elupload"
                     ref="upload"
                     action="https://jsonplaceholder.typicode.com/posts/"
                     :multiple="false"
-                    :show-file-list="false"
                     :on-change="handleChange"
                     :on-error="handleError"
                     :on-success="handleSuccess"
@@ -114,16 +124,10 @@
                     :on-exceed="handleExceed"
                     :auto-upload="false"
                 >
-                    <el-button slot="trigger" class="large-btn-120">浏览</el-button>
-                    <el-button style="margin: 0 20px;" @click="submitUpload" class="large-btn-120" type="primary">导入</el-button>
+                        <el-button slot="trigger" class="large-btn-120">浏览</el-button>
+                        <el-button style="margin: 0 20px;" @click="submitUpload" class="large-btn-120" type="primary">导入</el-button>
                 </el-upload>
-                <el-tooltip :open-delay="300" effect="dark" content="数据生成模板提示语" placement="top">
-                    <div>
-                        <el-button type="text">数据生成模板</el-button>
-                        <i class="el-icon-question" style="color: #0071B7"></i>
-                    </div>
-                </el-tooltip>
-            </div>
+
         </el-dialog>
 
         <governance-report :modelId="form.modelId" :visible="reportVisible" @updateVisible="updateVisible"></governance-report>
@@ -136,8 +140,11 @@
             </span>
         </el-dialog>
 
-        <el-dialog title="数据治理校验中" :append-to-body="true" :visible.sync="checkingVisible" width="500px">
-            <el-progress :text-inside="true" text-color="#fff" :stroke-width="26" :percentage="70"></el-progress>
+        <el-dialog title="数据治理校验中" center :append-to-body="true" :visible.sync="checkingVisible" width="500px">
+            <div class="progress-box">
+                <el-progress :text-inside="true" text-color="#fff" :stroke-width="26" :percentage="70"></el-progress>
+                <div class="progressAni" :style="{width: 70+'%'}"></div>
+            </div>
         </el-dialog>
     </div>
 </template>
@@ -193,7 +200,8 @@ export default {
                 name: '',
                 modelId: '',
                 powerFactor: '',
-                period: '',
+                year: '',
+                quarter: '',
                 maxPower: ''
             },
         }
@@ -216,14 +224,15 @@ export default {
                 name: '',
                 modelId: '',
                 powerFactor: '',
-                period: '',
+                year: '',
+                quarter: '',
                 maxPower: ''
             };
         },
         close() {
             this.$emit('updateVisible', false)
         },
-        handleClick(i, row) {
+        showImprtDialog(i, row) {
             console.log(i, row)
             this.importVisible = true;
         },
@@ -289,6 +298,7 @@ export default {
 .content /deep/ .el-dialog__body{
     padding-top: 10px;
 }
+
 .formbtn-box{
     text-align: right;
 }
@@ -306,22 +316,49 @@ export default {
     margin-right: 20px;
 }
 .line{
-    border-top: 1px solid #5f5f60;
+    border-top: 1px solid #E7E8E8;
     margin: 20px 0;
 }
-
-.import{
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.progress-box{
+    position: relative;
 }
-.import span{
+.progressAni{
+    position: absolute;
+    left:0;top:0;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 100px;
+}
+.progressAni::after{
+    content:'';
+    position: absolute;
+    left: 0px;
+    box-shadow: 0px 0px 15px 8px #fff;
+    top: -50%;
+    width: 0px;
+    height: 200%;
+    transform-origin: center;
+    transform: rotate(30deg);
+    animation: progress-14137bf4 3s linear infinite;
+}
+@keyframes progress {
+    0% {
+        left: 0;
+    }
+    15%{
+        left: 120%;
+    }
+    100%{
+        left: 120%;
+    }
+}
+/* .import span{
     color: #5f5f60;
     font-size: 16px;
     font-weight: bold;
-}
+} */
     
-.pathbox{
+/* .pathbox{
     border: 1px solid #DCDFE6;
     height: 40px;
     width: 40%;
@@ -343,5 +380,5 @@ export default {
     right: 4px;
     top: 20px;
     transform: translateY(-50%);
-}
+} */
 </style>
