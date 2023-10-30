@@ -7,7 +7,7 @@
                     <h2>数据治理报告</h2>
                     <span>创建时间：{{ createTime }}</span>
                     <el-button type="text" style="padding:0;marginLeft:12px;" v-if="!isCreating" @click="createReportImage">报告下载</el-button>
-                    <el-button type="text" v-if="!isCreating" style="padding:0;float: left;">
+                    <el-button type="text" @click="showDialog = false" v-if="!isCreating" style="padding:0;float: left;">
                         返回
                         <i class="el-icon-d-arrow-left" style="color: #0071B7;fontWeight: bolder;"></i>
                     </el-button>

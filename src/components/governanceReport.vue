@@ -3,7 +3,7 @@
         <el-dialog class="dialog-report" top="5vh" :append-to-body="true" title="数据治理报告" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
             width="90%">
                 <div class="header-action">
-                    <el-button type="text" @click="showDetail">
+                    <el-button type="text" @click="showDialog = false">
                         返回
                         <i class="el-icon-d-arrow-left" style="color: #0071B7;fontWeight: bolder;"></i>
                     </el-button>
@@ -55,7 +55,7 @@
                     </div>
                 </div>
             <span slot="footer" class="dialog-footer">
-                <el-button @click="confirmVisible = true" type="primary" :plain="true" :round="true">数据确认</el-button>
+                <el-button @click="showDetail" type="primary" :plain="true" :round="true">报告生成</el-button>
             </span>
         </el-dialog>
 
@@ -63,13 +63,6 @@
 
         <governance-item-detail :checkId="checkId" :visible="itemDetailVisible" @updateVisible="updateItemDetailVisible"></governance-item-detail>
         
-        <el-dialog title="提 示" :append-to-body="true" :visible.sync="confirmVisible" width="30%" center>
-            <h2 style="text-align: center">是否确认使用该治理数据？</h2>
-            <span slot="footer" class="dialog-footer">
-                <el-button type="primary" @click="confirmData">确 认</el-button>
-                <el-button @click="confirmData">取 消</el-button>
-            </span>
-        </el-dialog>
     </div>
 </template>
 
@@ -119,7 +112,6 @@ export default {
             loading: false,
             detailVisible: false,
             itemDetailVisible: false,
-            confirmVisible: false,
             anomalieList: [],
             governReport: [],
             anomalieDesc: [
@@ -139,7 +131,7 @@ export default {
             let loadingInstance = this.$loading({
                 target: document.querySelector('.dialog-report .el-dialog'),
                 lock: true,
-                text: '数据治理校验中',
+                text: '加载中...',
                 spinner: 'el-icon-loading',
                 background: 'rgba(255, 255, 255, 1)',
             })
@@ -171,10 +163,6 @@ export default {
         updateItemDetailVisible(val) {
             this.itemDetailVisible = val;
         },
-        confirmData() {
-            this.confirmVisible = false;
-            this.showDialog = false;
-        }
     }
 }
 </script>

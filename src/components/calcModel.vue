@@ -50,17 +50,20 @@
                 </el-row>
             </el-form>
             <div class="formbtn-box">
-                <el-button class="large-btn-120 right20" type="primary" @click="close">保存</el-button>
-                <el-button class="large-btn-120 right20" type="primary" @click="close">评估</el-button>
+                <el-button class="large-btn-120 right20" :disabled="isChecking" type="primary" @click="close">保存</el-button>
+                <el-button class="large-btn-120 right20" :disabled="isChecking" type="primary" @click="close">评估</el-button>
             </div>
             <div class="line"></div>
             <div class="tablebtn-box">
-                <el-button class="large-btn-120 right20" type="primary" @click="close">批量校验</el-button>
-                <el-button class="large-btn-120 right20" type="primary" @click="close">批量导出</el-button>
-                <el-button class="large-btn-120 right20" type="primary" @click="close">批量删除</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking" @click="checkData">批量校验</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking" @click="close">批量导出</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking" @click="showDeleteDialog()">批量删除</el-button>
+                <el-button class="large-btn-140" type="primary" @click="showReport">
+                    <i v-if="isChecking" class="el-icon-loading"></i>
+                    {{ isChecking ? '数据治理中...' : '治理结果查看' }}
+                </el-button>
             </div>
             <el-table :data="templateTable" border multipleTable v-loading="loading_table">
-                <el-table-column type="selection" width="50" align="center"></el-table-column>
                 <el-table-column type="index" label="序号" width="50" align="center"></el-table-column>
                 <el-table-column property="name" label="数据项" width="280" align="center"></el-table-column>
                 <el-table-column property="period" label="计算周期" align="center" min-width="180"></el-table-column>
@@ -72,10 +75,10 @@
                     label="操作"
                     width="200">
                     <template slot-scope="scope">
-                        <el-button @click="handleClick(scope.$index, scope.row)" type="text">导入</el-button>
-                        <el-button type="text" @click="checkData(scope.row.id)">校验</el-button>
-                        <el-button type="text">导出</el-button>
-                        <el-button type="text">删除</el-button>
+                        <el-button :disabled="isChecking" @click="handleClick(scope.$index, scope.row)" type="text">导入</el-button>
+                        <el-button :disabled="isChecking" type="text" @click="checkData">校验</el-button>
+                        <el-button :disabled="isChecking" type="text">导出</el-button>
+                        <el-button :disabled="isChecking" type="text" @click="showDeleteDialog(scope.row.id)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -123,7 +126,19 @@
             </div>
         </el-dialog>
 
-        <governance-report :checkId="checkId" :visible="reportVisible" @updateVisible="updateVisible"></governance-report>
+        <governance-report :modelId="form.modelId" :visible="reportVisible" @updateVisible="updateVisible"></governance-report>
+
+        <el-dialog title="提 示" :append-to-body="true" :visible.sync="deleteVisible" width="500px" center>
+            <h2 style="text-align: center">是否确认删除{{deleteAll ? '所有' : '该条'}}记录？删除后需重新校验！</h2>
+            <span slot="footer" class="dialog-footer">
+                <el-button type="primary" @click="deleteData">确 认</el-button>
+                <el-button @click="deleteData">取 消</el-button>
+            </span>
+        </el-dialog>
+
+        <el-dialog title="数据治理校验中" :append-to-body="true" :visible.sync="checkingVisible" width="500px">
+            <el-progress :text-inside="true" text-color="#fff" :stroke-width="26" :percentage="70"></el-progress>
+        </el-dialog>
     </div>
 </template>
 
@@ -163,13 +178,16 @@ export default {
     },
     data() {
         return {
+            isChecking: false,
+            checkingVisible: false,
             loading_form: false,
             loading_table: false,
             reportVisible: false,
             importVisible: false,
+            deleteVisible: false,
+            deleteAll:false,
             modelList: [],
             templateTable: [],
-            checkId: '',
             filePath: '',
             form: {
                 name: '',
@@ -190,9 +208,10 @@ export default {
             this.getTemplate(this.modelList[0].id);
         },
         destory() {
+            this.isChecking = false;
             this.modelList = [];
             this.templateTable = [];
-            this.checkId = '';
+            this.filePath = '';
             this.form = {
                 name: '',
                 modelId: '',
@@ -216,9 +235,18 @@ export default {
             this.templateTable = await getTemplateApi({id});
             this.loading_table = false;
         },
-        checkData(id) {
-            this.checkId = id;
-            this.reportVisible = true;
+        // 
+        showReport() {
+            if(this.isChecking) {
+                this.checkingVisible = true;
+            }else{
+                this.modelId = this.form.modelId;
+                this.reportVisible = true;
+            }
+        },
+        checkData() {
+            this.checkingVisible = true;
+            this.isChecking = true;
         },
 
         submitUpload() {
@@ -242,6 +270,16 @@ export default {
         handleSuccess() {
             this.$message.success(`导入成功`);
         },
+        showDeleteDialog(id){
+            if(id) {
+                // 
+            }
+            this.deleteAll = !id;
+            this.deleteVisible = true;
+        },
+        deleteData() {
+            this.deleteVisible = false;
+        }
     },
 }
 </script>
@@ -259,6 +297,10 @@ export default {
 }
 .large-btn-120{
     width: 120px;
+}
+.large-btn-140{
+    width: 140px;
+    float: right;
 }
 .right20{
     margin-right: 20px;
