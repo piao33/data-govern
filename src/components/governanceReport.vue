@@ -3,7 +3,10 @@
         <el-dialog class="dialog-report" top="5vh" :append-to-body="true" title="数据治理报告" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false" :close-on-click-modal="false"
             width="90%">
                 <div class="header-action">
-                    <el-button type="text" @click="showDetail">详情</el-button>
+                    <el-button type="text" @click="showDetail">
+                        返回
+                        <i class="el-icon-d-arrow-left" style="color: #0071B7;fontWeight: bolder;"></i>
+                    </el-button>
                     <div class="vertical-line"></div>
                     <el-button type="text">已治理数据批量下载</el-button>
                 </div>
