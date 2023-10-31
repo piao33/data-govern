@@ -18,8 +18,8 @@
                     </el-col>
                     <el-col :span="8">
                         <el-form-item label="计算模式:" label-width="160px">
-                            <el-select style="width: 100%" v-model="form.modelId" placeholder="请选择计算模式" @change="getTemplate">
-                                <el-option :label="item.name" :value="item.id" v-for="item in modelList" :key="item.id"></el-option>
+                            <el-select style="width: 100%" :disabled="hasImport" v-model="form.modelId" placeholder="请选择计算模式" @change="getTemplate">
+                                <el-option :label="item.dictLabel" :value="item.dictValue" v-for="item in modelList" :key="item.id"></el-option>
                             </el-select>
                         </el-form-item>
                     </el-col>
@@ -34,6 +34,7 @@
                         <el-form-item label="计算期:" label-width="100px">
                             <el-col :span="12">
                                 <el-date-picker
+                                    :disabled="hasImport" 
                                     style="width: 100%"
                                     v-model="form.year"
                                     type="year"
@@ -41,8 +42,8 @@
                                 </el-date-picker>
                             </el-col>
                             <el-col :span="11" :offset="1">
-                                <el-select v-model="form.quarter" placeholder="季节">
-                                    <el-option :label="item" :value="item" v-for="item in ['春季','夏季','秋季','冬季']" :key="item"></el-option>
+                                <el-select v-model="form.season" placeholder="季节" :disabled="hasImport" >
+                                    <el-option :label="item.dictLabel" :value="item.dictValue" v-for="item in seasonList" :key="item.dictValue"></el-option>
                                 </el-select>
                             </el-col>
                         </el-form-item>
@@ -55,35 +56,35 @@
                 </el-row>
             </el-form>
             <div class="formbtn-box">
-                <el-button class="large-btn-120 right20" :disabled="isChecking" type="primary" @click="close">保存</el-button>
+                <el-button class="large-btn-120 right20" :disabled="disableSave" type="primary" @click="savePlan">保存</el-button>
                 <el-button class="large-btn-120 right20" :disabled="isChecking" type="primary" @click="close">评估</el-button>
             </div>
-            <div class="line"></div>
-            <div class="tablebtn-box">
-                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking" @click="checkData">批量校验</el-button>
-                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking" @click="close">批量导出</el-button>
-                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking" @click="showDeleteDialog()">批量删除</el-button>
-                <el-button class="large-btn-140" type="primary" @click="showReport">
+            <div class="line" v-if="templateTable.length"></div>
+            <div class="tablebtn-box" v-if="templateTable.length">
+                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasRuntimeImport" @click="checkData">批量校验</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasImport" @click="close">批量导出</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasImport" @click="showDeleteDialog()">批量删除</el-button>
+                <el-button class="large-btn-140" :disabled="!isChecking && !hasChecked" type="primary" @click="showReport">
                     <i v-if="isChecking" class="el-icon-loading"></i>
                     {{ isChecking ? '数据治理中...' : '治理结果查看' }}
                 </el-button>
             </div>
             <el-table :data="templateTable" border multipleTable v-loading="loading_table">
                 <el-table-column type="index" label="序号" width="50" align="center"></el-table-column>
-                <el-table-column property="name" label="数据项" width="280" align="center"></el-table-column>
-                <el-table-column property="period" label="计算周期" align="center" min-width="180"></el-table-column>
-                <el-table-column property="import_time" label="导入时间" align="center"></el-table-column>
-                <el-table-column property="check_time" label="校验时间" align="center"></el-table-column>
+                <el-table-column property="tableName" label="数据项" width="280" align="center"></el-table-column>
+                <el-table-column property="computingCycle" label="计算周期" align="center" min-width="180"></el-table-column>
+                <el-table-column property="impTime" label="导入时间" align="center"></el-table-column>
+                <el-table-column property="verifiesTime" label="校验时间" align="center"></el-table-column>
                 <el-table-column property="status" label="状态" width="100" align="center"></el-table-column>
                 <el-table-column
                     align="center"
                     label="操作"
                     width="200">
                     <template slot-scope="scope">
-                        <el-button :disabled="isChecking" @click="showImprtDialog(scope.$index, scope.row)" type="text">导入</el-button>
-                        <el-button :disabled="isChecking" type="text" @click="checkData">校验</el-button>
-                        <el-button :disabled="isChecking" type="text">导出</el-button>
-                        <el-button :disabled="isChecking" type="text" @click="showDeleteDialog(scope.row.id)">删除</el-button>
+                        <el-button :disabled="isChecking || !scope.row.canImport" @click="showImportDialog(scope.$index, scope.row)" type="text">导入</el-button>
+                        <el-button :disabled="isChecking || !scope.row.canCheck" type="text" @click="checkData">校验</el-button>
+                        <el-button :disabled="isChecking || !scope.row.canDownload" type="text">导出</el-button>
+                        <el-button :disabled="isChecking || !scope.row.canDelete" type="text" @click="showDeleteDialog(scope.row.id)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -151,7 +152,7 @@
 
 <script>
 import governanceReport from  './governanceReport.vue'
-import { getCalcModelApi, getTemplateApi } from '/src/api/index.js'
+import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi } from '/src/api/index.js'
 export default {
     name: 'calcModel',
     components: {
@@ -164,6 +165,18 @@ export default {
         }
     },
     computed: {
+        disableSave() {
+            return this.isChecking || !this.form.modelId || !this.form.year || !this.form.season || this.hasImport
+        },
+        hasImport() {
+            return this.templateTable.some(item => item.status && !(item.status == '未导入' || item.status == '导入中'))
+        },
+        hasRuntimeImport() {
+            return this.templateTable.some(item => item.status && true && !(item.status == '未导入' || item.status == '导入中'))
+        },
+        hasChecked() {
+            return this.templateTable.some(item => item.status && item.status == '已校验')
+        },
         showDialog: {
             get() {
                 return this.visible
@@ -194,26 +207,28 @@ export default {
             deleteVisible: false,
             deleteAll:false,
             modelList: [],
+            seasonList: [],
             templateTable: [],
             filePath: '',
             form: {
                 name: '',
                 modelId: '',
                 powerFactor: '',
-                year: '',
-                quarter: '',
+                year: new Date(),
+                season: '',
                 maxPower: ''
             },
         }
     },
     methods: {
         async init() {
-            this.loading_form = true;
-            this.loading_table = true;
-            this.modelList = await getCalcModelApi()
-            this.form.modelId = this.modelList[0].id;
-            this.loading_form = false;
-            this.getTemplate(this.modelList[0].id);
+            this.loading_form = true
+            const [modelRows, seasonRows] = await Promise.all([getCalcModelApi(), getSeasonApi()])
+            this.modelList = modelRows
+            this.seasonList = seasonRows
+            this.form.season = seasonRows[0].dictValue
+            this.loading_form = false
+            this.getPlan();
         },
         destory() {
             this.isChecking = false;
@@ -224,24 +239,72 @@ export default {
                 name: '',
                 modelId: '',
                 powerFactor: '',
-                year: '',
-                quarter: '',
+                year: new Date(),
+                season: '',
                 maxPower: ''
             };
         },
         close() {
             this.$emit('updateVisible', false)
         },
-        showImprtDialog(i, row) {
+        async getPlan() {
+            /**
+             * 后端设置的状态 status 参考
+             * 
+             * 未导入
+             * 导入中
+             * 已导入
+             * 校验中
+             * 校验失败
+             * 已校验
+             */
+            let data = await getPlanApi(123)
+            data.forEach(item=>{
+                item.canImport = !!item.computingCycle // 判断是否有计算周期（有则表明数据已入库，可以导入数据表）
+                item.canCheck = item.status == '已导入'
+                item.canDownload = item.status == '已校验'
+                item.canDelete = item.status == '已导入' || item.status == '校验失败' || item.status == '已校验'
+            })
+            this.templateTable = data;
+
+            this.form.modelId = data[0].computeMode;
+            let [year, season] = this.handlePeriod(data[0].computingCycle)
+            this.form.year = year;
+            this.form.season = season;
+            console.log(year, season)
+        },
+        handlePeriod(str){
+            /**
+             * 在方案详情中，没有计算周期的字段，使用computingCycle字段拆解获取
+             * 
+             * 后端设置的春夏秋冬 ID 参考
+             * 03-01;05-31
+             * 06-01;08-31
+             * 09-01;11-30
+             * 12-01;02-28
+             */
+            let year = str.slice(0,4)
+            let reg = new RegExp(''+year+'-','gi');
+            let season = str.replace(reg, '').replace('至', ';');
+            return [new Date(year), season]
+        },
+        async savePlan() {
+            let year = this.form.year.getFullYear()
+            let {code} = await savePlanApi(this.form.modelId, year, this.form.season, 1)
+            if(code == 200) {
+                this.getPlan()
+            }
+        },
+        showImportDialog(i, row) {
             console.log(i, row)
             this.importVisible = true;
         },
         updateVisible(val) {
             this.reportVisible = val;
         },
-        async getTemplate(id) {
+        async getTemplate() {
             this.loading_table = true;
-            this.templateTable = await getTemplateApi({id});
+            this.templateTable = await getTemplateApi(this.form.modelId);
             this.loading_table = false;
         },
         // 

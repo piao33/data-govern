@@ -3,7 +3,7 @@ import qs from 'qs';
 
 // 默认配置
 const instance = axios.create({
-    baseURL: 'https://mock.apifox.cn/m1/3432133-0-default',
+    // baseURL: 'https://mock.apifox.cn/m1/3432133-0-default',
     timeout: 10000,
     headers: {Content_type: 'application/x-www-form-urlencoded',},
 });
@@ -11,7 +11,7 @@ const instance = axios.create({
 // 请求拦截器
 instance.interceptors.request.use(function(config) {
     // 在请求发出前做些操作
-    config.data = qs.stringify(config.data)
+    // config.data = qs.stringify(config.data)
     return config;
 },function(error){
     console.log(error)
