@@ -330,26 +330,28 @@ export default {
     border-radius: 100px;
 }
 .progressAni::after{
-    content:'';
+    content: '';
     position: absolute;
-    left: 0px;
-    box-shadow: 0px 0px 15px 8px #fff;
-    top: -50%;
+    left: 0;
+    top:0;
     width: 0px;
-    height: 200%;
-    transform-origin: center;
-    transform: rotate(30deg);
-    animation: progress-14137bf4 3s linear infinite;
+    height: 100%;
+    border-radius: 100px;
+    background-color: #fff;
+    animation: progress-14137bf4 2.8s linear infinite;
 }
 @keyframes progress {
-    0% {
-        left: 0;
+    0%{
+        width: 0px;
+        opacity: 0.3;
     }
-    15%{
-        left: 120%;
+    60%{
+        width: 100%;
+        opacity: 0.3;
     }
     100%{
-        left: 120%;
+        width: 100%;
+        opacity: 0;
     }
 }
 /* .import span{
