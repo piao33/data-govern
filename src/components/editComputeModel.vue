@@ -18,7 +18,7 @@
                     </el-col>
                     <el-col :span="8">
                         <el-form-item label="计算模式:" label-width="160px">
-                            <el-select style="width: 100%" :disabled="hasImport" v-model="form.modelId" placeholder="请选择计算模式" @change="getTemplate">
+                            <el-select style="width: 100%" :disabled="hasImport" v-model="form.modelId" placeholder="请选择计算模式" @change="onChangeModel">
                                 <el-option :label="item.dictLabel" :value="item.dictValue" v-for="item in modelList" :key="item.id"></el-option>
                             </el-select>
                         </el-form-item>
@@ -69,7 +69,7 @@
                     {{ isChecking ? '数据治理中...' : '治理结果查看' }}
                 </el-button>
             </div>
-            <el-table :data="templateTable" border multipleTable v-loading="loading_table">
+            <el-table :data="templateTable" v-if="templateTable.length" border multipleTable v-loading="loading_table">
                 <el-table-column type="index" label="序号" width="50" align="center"></el-table-column>
                 <el-table-column property="tableName" label="数据项" width="280" align="center"></el-table-column>
                 <el-table-column property="computingCycle" label="计算周期" align="center" min-width="180"></el-table-column>
@@ -209,7 +209,7 @@ export default {
             modelList: [],
             seasonList: [],
             templateTable: [],
-            filePath: '',
+            oldModelId: '',
             form: {
                 name: '',
                 modelId: '',
@@ -234,7 +234,6 @@ export default {
             this.isChecking = false;
             this.modelList = [];
             this.templateTable = [];
-            this.filePath = '';
             this.form = {
                 name: '',
                 modelId: '',
@@ -258,7 +257,8 @@ export default {
              * 校验失败
              * 已校验
              */
-            let data = await getPlanApi(123)
+            let data = await getPlanApi(518)
+            if(!data.length) return
             data.forEach(item=>{
                 item.canImport = !!item.computingCycle // 判断是否有计算周期（有则表明数据已入库，可以导入数据表）
                 item.canCheck = item.status == '已导入'
@@ -268,10 +268,10 @@ export default {
             this.templateTable = data;
 
             this.form.modelId = data[0].computeMode;
+            this.oldModelId = data[0].computeMode;
             let [year, season] = this.handlePeriod(data[0].computingCycle)
             this.form.year = year;
             this.form.season = season;
-            console.log(year, season)
         },
         handlePeriod(str){
             /**
@@ -302,9 +302,14 @@ export default {
         updateVisible(val) {
             this.reportVisible = val;
         },
-        async getTemplate() {
+        async onChangeModel() {
+
             this.loading_table = true;
-            this.templateTable = await getTemplateApi(this.form.modelId);
+            if(this.oldModelId == this.form.modelId) {
+                this.getPlan()
+            } else{
+                this.templateTable = await getTemplateApi(this.form.modelId);
+            }
             this.loading_table = false;
         },
         // 
@@ -325,7 +330,6 @@ export default {
             this.$refs.upload.submit();
         },
         handleChange(file, fileList) {
-            this.filePath = file.name;
         },
         handleExceed(files) {
             this.$message.warning(`限制导入 1 个文件，请先清空选择的文件后再操作`);
@@ -333,7 +337,6 @@ export default {
         handleRemove() {
             console.log('remove')
             this.$refs.upload.clearFiles();
-            this.filePath = '';
         },
         handleError( err) {
             console.log(err)

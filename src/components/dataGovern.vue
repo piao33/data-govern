@@ -1,16 +1,16 @@
 <template>
     <div class="content">
         <el-button class="govern-btn" @click="visible = true" icon="el-icon-s-cooperation" circle></el-button>
-        <calc-model :visible="visible" @updateVisible="updateVisible"></calc-model>
+        <compute-model :visible="visible" @updateVisible="updateVisible"></compute-model>
     </div>
 </template>
 
 <script>
-import calcModel from  './calcModel.vue'
+import ComputeModel from  './editComputeModel.vue'
 export default {
     name: 'dataGovern',
     components: {
-        calcModel,
+        ComputeModel,
     },
     data() {
         return {
