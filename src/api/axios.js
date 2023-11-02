@@ -12,6 +12,7 @@ const instance = axios.create({
 instance.interceptors.request.use(function(config) {
     // 在请求发出前做些操作
     // config.data = qs.stringify(config.data)
+    console.log(config)
     return config;
 },function(error){
     console.log(error)

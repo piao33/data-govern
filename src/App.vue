@@ -21,6 +21,10 @@ body,p,ul,li,h1,h2,h3,h4,h5,h6{
   padding:0;
   list-style: none;
 }
+a{
+  color: unset;
+  text-decoration: none;
+}
 .el-loading-spinner{
   font-size: 48px;
 }

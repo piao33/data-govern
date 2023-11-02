@@ -12,6 +12,14 @@ module.exports = {
         target: 'http://192.168.1.43:9001',
         changeOrigin: true,
       },
+      '/upload': {
+        target: 'http://192.168.1.12:8000',
+        changeOrigin: true,
+      },
+      '/govern': {
+        target: 'http://192.168.1.43:9001',
+        changeOrigin: true,
+      }
     }
   }
 }

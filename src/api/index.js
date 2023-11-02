@@ -45,6 +45,21 @@ function getPlanApi(planId=1) {
     })
 }
 
+// 导入数据
+function importFileApi({file, planId=1, tableId=1, onUploadProgress}) {
+    return requests({
+        method: 'post',
+        // url: `/govern/importData`,
+        url: `/upload`,
+        data: {
+            file, planId, tableId
+        },
+        timeout: 60 * 10 * 1000,
+        onUploadProgress,
+        headers: {'Content-Type': 'multipart/form-data'}
+    })
+}
+
 
 function getCheckResultApi(mid) {
     return requests({
@@ -85,7 +100,8 @@ export {
     getTemplateApi,
     savePlanApi,
     getPlanApi,
-    
+    importFileApi,
+
     getCheckResultApi,
     getAnomalieTypeApi,
     getAnomalieDetailApi,
