@@ -46,11 +46,11 @@ function getPlanApi(planId=1) {
 }
 
 // 导入数据
-function importFileApi({file, planId=1, tableId=1, onUploadProgress}) {
+function uploadFileApi({file, planId=1, tableId=1, onUploadProgress}) {
     return requests({
         method: 'post',
-        // url: `/govern/importData`,
-        url: `/upload`,
+        url: `/govern/importData`,
+        // url: `/upload`,
         data: {
             file, planId, tableId
         },
@@ -100,7 +100,7 @@ export {
     getTemplateApi,
     savePlanApi,
     getPlanApi,
-    importFileApi,
+    uploadFileApi,
 
     getCheckResultApi,
     getAnomalieTypeApi,

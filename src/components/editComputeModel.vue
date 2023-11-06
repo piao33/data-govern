@@ -18,7 +18,7 @@
                     </el-col>
                     <el-col :span="8">
                         <el-form-item label="计算模式:" label-width="160px">
-                            <el-select style="width: 100%" :disabled="hasChecked" v-model="form.modelId" placeholder="请选择计算模式" @change="onChangeModel">
+                            <el-select style="width: 100%" :disabled="hasChecked || isChecking" v-model="form.modelId" placeholder="请选择计算模式" @change="onChangeModel">
                                 <el-option :label="item.dictLabel" :value="item.dictValue" v-for="item in modelList" :key="item.id"></el-option>
                             </el-select>
                         </el-form-item>
@@ -34,7 +34,7 @@
                         <el-form-item label="计算期:" label-width="100px">
                             <el-col :span="12">
                                 <el-date-picker
-                                    :disabled="hasChecked" 
+                                    :disabled="hasChecked || isChecking" 
                                     style="width: 100%"
                                     v-model="form.year"
                                     type="year"
@@ -42,7 +42,7 @@
                                 </el-date-picker>
                             </el-col>
                             <el-col :span="11" :offset="1">
-                                <el-select v-model="form.season" placeholder="季节" :disabled="hasChecked" >
+                                <el-select v-model="form.season" placeholder="季节" :disabled="hasChecked || isChecking" >
                                     <el-option :label="item.dictLabel" :value="item.dictValue" v-for="item in seasonList" :key="item.dictValue"></el-option>
                                 </el-select>
                             </el-col>
@@ -61,9 +61,9 @@
             </div>
             <div class="line" v-if="templateTable.length"></div>
             <div class="tablebtn-box" v-if="templateTable.length">
-                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasRuntimeImport" @click="checkData">批量校验</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasRuntimeTable" @click="checkData">批量校验</el-button>
                 <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasChecked" @click="close">批量导出</el-button>
-                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasImport" @click="showDeleteDialog()">批量删除</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasUpload" @click="showDeleteDialog()">批量删除</el-button>
                 <el-button class="large-btn-140" :disabled="!isChecking && !hasChecked" type="primary" @click="showReport">
                     <i v-if="isChecking" class="el-icon-loading"></i>
                     {{ isChecking ? '数据治理中...' : '治理结果查看' }}
@@ -75,12 +75,17 @@
                 <el-table-column property="computingCycle" label="计算周期" align="center" min-width="180"></el-table-column>
                 <el-table-column property="impTime" label="导入时间" align="center"></el-table-column>
                 <el-table-column property="verifiesTime" label="校验时间" align="center"></el-table-column>
-                <el-table-column property="status" label="状态" width="100" align="center"></el-table-column>
+                <el-table-column label="状态" width="100" align="center">
+                    <template slot-scope="scope">
+                        <i v-if="scope.row.isUploading" class="el-icon-loading"></i>
+                        <span>{{ scope.row.isUploading ? '导入中' : scope.row.status }}</span>
+                    </template>
+                </el-table-column>
                 <el-table-column
                     label="操作"
                     width="200">
                     <template slot-scope="scope">
-                        <el-button :disabled="isChecking || !scope.row.canImport" @click="showImportDialog(scope.$index, scope.row)" type="text">导入</el-button>
+                        <el-button :disabled="isChecking || !scope.row.canUpload" @click="showUploadDialog(scope.$index, scope.row)" type="text">{{scope.row.isUploading ? '导入中' : '导入'}}</el-button>
                         <el-button v-if="scope.row.showCheck" :disabled="isChecking || !scope.row.canCheck" type="text" @click="checkData">校验</el-button>
                         <el-button :disabled="isChecking || !scope.row.canDownload" type="text">导出</el-button>
                         <el-button :disabled="isChecking || !scope.row.canDelete" type="text" @click="showDeleteDialog(scope.row.id)">删除</el-button>
@@ -89,50 +94,19 @@
             </el-table>
         </el-dialog>
 
-        <el-dialog
-            title="检验文件导入" 
-            :visible.sync="importVisible" 
-            :close-on-press-escape="false"	
-            :close-on-click-modal="false"	
-            @closed="importClosed"
-            top="30vh"
-            width="500px"
-        >   
-            <el-tooltip :open-delay="300" effect="dark" content="点击下载表格模板" placement="top">
-                <el-button type="text">
-                    <a download :href="'/excelTemplate/'+currentRow.tableName+'.xlsx'">数据生成模板</a>
-                    <i class="el-icon-question" style="color: #0071B7"></i>
-                </el-button>
-            </el-tooltip>
-
-                <span>请选择导入文件：</span>
-                <div class="pathbox">
-                    <el-tooltip :open-delay="300" :disabled="!filePath" effect="dark" :content="filePath" placement="top">
-                        <p>{{ filePath }}</p>
-                    </el-tooltip>
-                    <i @click="importClosed" class="el-icon-circle-close" style="color: #0071B7" v-show="filePath"></i>
-                </div>
-
-                <el-upload
-                    class="elupload"
-                    ref="upload"
-                    :multiple="false"
-                    action=""
-                    :limit="1"
-                    :on-change="handleChange"
-                    :on-error="handleError"
-                    :on-success="handleSuccess"
-                    :on-progreess="onUploadProgress"
-                    accept=".xls,.xlsx,.csv"
-                    :on-exceed="handleExceed"
-                    :auto-upload="false"
-                    :http-request="importFile"
-                >
-                    <el-button slot="trigger" class="large-btn-120">浏览</el-button>
-                    <el-button style="margin: 0 20px;" @click="submitUpload" class="large-btn-120" type="primary">导入</el-button>
-                </el-upload>
-
-        </el-dialog>
+        <upload-dialog 
+            v-for="(item, index) in templateTable" 
+            :key="item.cmooId" 
+            :planId="planId" 
+            :data="item" 
+            :index="index" 
+            :visible="item.uploadVisible"
+            @uploading="uploading"
+            @uploadError="uploadError"
+            @uploadSucess="uploadSucess"
+            @updateUploadVisible="updateUploadVisible"
+        >
+        </upload-dialog>
 
         <governance-report :modelId="form.modelId" :visible="reportVisible" @updateVisible="updateVisible"></governance-report>
 
@@ -155,11 +129,13 @@
 
 <script>
 import governanceReport from  './governanceReport.vue'
-import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi, importFileApi } from '../api/index.js'
+import uploadDialog from './uploadDialog.vue'
+import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi } from '../api/index.js'
 export default {
     name: 'calcModel',
     components: {
         governanceReport,
+        uploadDialog
     },
     props: {
         visible: {
@@ -171,11 +147,11 @@ export default {
         disableSave() {
             return this.isChecking || !this.form.modelId || !this.form.year || !this.form.season || this.hasChecked
         },
-        hasImport() {
+        hasUpload() {
             return this.templateTable.some(item => item.status && !(item.status == '未导入' || item.status == '导入中'))
         },
-        hasRuntimeImport() {
-            return this.templateTable.some(item => item.status && true && !(item.status == '未导入' || item.status == '导入中'))
+        hasRuntimeTable() {
+            return this.templateTable.some(item => item.status && item.tableType == '2' && !(item.status == '未导入' || item.status == '导入中'))
         },
         hasChecked() {
             return this.templateTable.some(item => item.status && item.status == '已校验')
@@ -201,22 +177,23 @@ export default {
     },
     data() {
         return {
+            planId: 519,
             isChecking: false,
             checkingVisible: false,
             loading_form: false,
             loading_table: false,
             reportVisible: false,
-            importVisible: false,
+            // uploadVisible: false,
             deleteVisible: false,
-            filePath: '',
+            
             deleteAll:false,
             modelList: [],
             seasonList: [],
             templateTable: [],
             oldModelId: '',
-            currentRow: {},
-            // uploadUrl: 'http://192.168.1.17:9001/govern/importData',
-            // uploadUrl: 'http://192.168.1.12:8000/upload',
+            // currentRow: {},
+            // uploadUrl: 'http://192.168.1.22:9001/govern/importData',
+            // uploadUrl: 'http://192.168.1.16:8000/upload',
             form: {
                 name: '',
                 modelId: '',
@@ -226,6 +203,10 @@ export default {
                 maxPower: ''
             },
         }
+    },
+    created() {
+        let search = new URLSearchParams(location.search)
+        this.planId = search.get('planId')
     },
     methods: {
         async init() {
@@ -266,14 +247,16 @@ export default {
              * 校验失败
              * 已校验
              */
-            let data = await getPlanApi(519)
+            let data = await getPlanApi(this.planId)
             if(!data.length) return
-            data.forEach(item=>{
-                item.canImport = !!item.computingCycle // 判断是否有计算周期（有则表明数据已入库，可以导入数据表）
+            data.forEach((item,index)=>{
+                item.canUpload = !!item.computingCycle // 判断是否有计算周期（有则表明数据已入库，可以导入数据表）
                 item.canCheck = item.status == '已导入'
                 item.canDownload = item.status == '已校验'
                 item.canDelete = item.status == '已导入' || item.status == '校验失败' || item.status == '已校验'
                 item.showCheck = item.tableType == '2'  // 1是基本数据表，不需要校验， 2是运行数据表，需要校验
+                item.uploadVisible = this.templateTable?.[index]?.uploadVisible || false
+                item.isUploading = (item.status == '导入中')
             })
             this.templateTable = data;
 
@@ -300,17 +283,31 @@ export default {
         },
         async savePlan() {
             let year = this.form.year.getFullYear()
-            let {code} = await savePlanApi(this.form.modelId, year, this.form.season, 519)
+            let {code} = await savePlanApi(this.form.modelId, year, this.form.season, this.planId)
             if(code == 200) {
                 this.getPlan()
             }
         },
-        showImportDialog(i, row) {
-            this.currentRow = row;
-            this.importVisible = true;
-        },
         updateVisible(val) {
             this.reportVisible = val;
+        },
+        showUploadDialog(i, row) {
+            // this.currentRow = row;
+            this.templateTable[i].uploadVisible = true;
+        },
+        updateUploadVisible(i, val) {
+            this.templateTable[i].uploadVisible = val;
+        },
+        uploadSucess(i) {
+            this.getPlan();
+            this.templateTable[i].isUploading = false;
+        },
+        uploadError(i) {
+            this.getPlan();
+            this.templateTable[i].isUploading = false;
+        },
+        uploading(i) {
+            this.templateTable[i].isUploading = true;
         },
         async onChangeModel() {
 
@@ -335,28 +332,7 @@ export default {
             this.checkingVisible = true;
             this.isChecking = true;
         },
-
-        submitUpload() {
-            this.$refs.upload.submit();
-        },
-        handleChange(file, fileList) {
-            console.log(file)
-            this.filePath = file.path
-        },
-        handleExceed(files) {
-            this.$message.warning(`限制导入 1 个文件，请先清空选择的文件后再操作`);
-        },
-        importClosed() {
-            this.$refs.upload.clearFiles();
-        },
-        handleError( err) {
-            console.log(err)
-            this.$message.error(`导入失败`);
-        },
-        handleSuccess(res, file, fileLs) {
-            console.log(res,file,fileLs)
-            this.$message.success(`导入成功`);
-        },
+        
         showDeleteDialog(id){
             if(id) {
                 // 
@@ -367,26 +343,6 @@ export default {
         deleteData() {
             this.deleteVisible = false;
         },
-        async importFile(fileData) {
-            console.log(fileData)
-            let file = fileData.file;
-            let {code} = await importFileApi({
-                file, 
-                planId: 519, 
-                tableId: this.currentRow.tableId,
-                onUploadProgress:this.onUploadProgress,
-            })
-            if(code == 200) {
-                this.importVisible = false;
-                this.getPlan();
-            }else {
-                throw new Error(false)
-            }
-        },
-        onUploadProgress(event) {
-            console.log(event)
-            return event
-        }
     },
 }
 </script>
@@ -419,11 +375,13 @@ export default {
 }
 .progress-box{
     position: relative;
+    height: 100%;
 }
 .progressAni{
     position: absolute;
     left:0;top:0;
     height: 100%;
+    width:100%;
     overflow: hidden;
     border-radius: 100px;
 }
@@ -434,9 +392,10 @@ export default {
     top:0;
     width: 0px;
     height: 100%;
+    width:100%;
     border-radius: 100px;
     background-color: #fff;
-    animation: progress-14137bf4 2.8s linear infinite;
+    animation: progress 2.8s linear infinite;
 }
 @keyframes progress {
     0%{
@@ -451,34 +410,5 @@ export default {
         width: 100%;
         opacity: 0;
     }
-}
-.import span{
-    color: #5f5f60;
-    font-size: 16px;
-    font-weight: bold;
-}
-    
-.pathbox{
-    border: 1px solid #DCDFE6;
-    height: 40px;
-    width: 40%;
-    margin: 0 30px 0 24px;
-    box-sizing: border-box;
-    position: relative;
-    padding: 0 16px;
-}
-.pathbox p{
-    line-height: 40px;
-    height: 100%;
-    overflow: hidden;
-    display: inline-block;
-}
-
-.pathbox i{
-    color: rgb(0, 113, 183);
-    position: absolute;
-    right: 4px;
-    top: 20px;
-    transform: translateY(-50%);
 }
 </style>
