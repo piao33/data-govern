@@ -61,9 +61,10 @@
             </div>
             <div class="line" v-if="templateTable.length"></div>
             <div class="tablebtn-box" v-if="templateTable.length">
-                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasRuntimeTable" @click="checkData">批量校验</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !allUpload" @click="checkData">批量校验</el-button>
                 <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasChecked" @click="close">批量导出</el-button>
                 <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasUpload" @click="showDeleteDialog()">批量删除</el-button>
+                <el-button class="large-btn-120 right20" @click="testClick">测试按钮</el-button>
                 <el-button class="large-btn-140" :disabled="!isChecking && !hasChecked" type="primary" @click="showReport">
                     <i v-if="isChecking" class="el-icon-loading"></i>
                     {{ isChecking ? '数据治理中...' : '治理结果查看' }}
@@ -85,10 +86,10 @@
                     label="操作"
                     width="200">
                     <template slot-scope="scope">
-                        <el-button :disabled="isChecking || !scope.row.canUpload" @click="showUploadDialog(scope.$index, scope.row)" type="text">{{scope.row.isUploading ? '导入中' : '导入'}}</el-button>
-                        <el-button v-if="scope.row.showCheck" :disabled="isChecking || !scope.row.canCheck" type="text" @click="checkData">校验</el-button>
+                        <el-button :disabled="isChecking || !scope.row.canUpload" @click="showUploadDialog(scope.$index)" type="text">导入</el-button>
+                        <el-button v-if="scope.row.showCheck" :disabled="isChecking || !allUpload" type="text" @click="checkData">校验</el-button>
                         <el-button :disabled="isChecking || !scope.row.canDownload" type="text">导出</el-button>
-                        <el-button :disabled="isChecking || !scope.row.canDelete" type="text" @click="showDeleteDialog(scope.row.id)">删除</el-button>
+                        <el-button :disabled="isChecking || !scope.row.canDelete" type="text" @click="showDeleteDialog(scope.row)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -111,7 +112,7 @@
         <governance-report :modelId="form.modelId" :visible="reportVisible" @updateVisible="updateVisible"></governance-report>
 
         <el-dialog title="提 示" :append-to-body="true" :visible.sync="deleteVisible" width="500px" center>
-            <h2 style="text-align: center">是否确认删除{{deleteAll ? '所有' : '该条'}}记录？删除后需重新校验！</h2>
+            <h2 style="text-align: center">是否确认删除{{deleteTableName}}？删除后需重新校验！</h2>
             <span slot="footer" class="dialog-footer">
                 <el-button type="primary" @click="deleteData">确 认</el-button>
                 <el-button @click="deleteData">取 消</el-button>
@@ -132,7 +133,7 @@ import governanceReport from  './governanceReport.vue'
 import uploadDialog from './uploadDialog.vue'
 import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi } from '../api/index.js'
 export default {
-    name: 'calcModel',
+    name: 'editComputeModel',
     components: {
         governanceReport,
         uploadDialog
@@ -148,13 +149,16 @@ export default {
             return this.isChecking || !this.form.modelId || !this.form.year || !this.form.season || this.hasChecked
         },
         hasUpload() {
-            return this.templateTable.some(item => item.status && !(item.status == '未导入' || item.status == '导入中'))
-        },
-        hasRuntimeTable() {
-            return this.templateTable.some(item => item.status && item.tableType == '2' && !(item.status == '未导入' || item.status == '导入中'))
+            return this.templateTable.some(item => item.status && (item.status == '已导入' || item.status == '已校验'))
         },
         hasChecked() {
             return this.templateTable.some(item => item.status && item.status == '已校验')
+        },
+        allUpload() {
+            return this.templateTable.every(item => item.status && (item.status == '已导入' || item.status == '已校验'))
+        },
+        hasUploading() {
+            return this.templateTable.some(item => item.isUploading)
         },
         showDialog: {
             get() {
@@ -173,7 +177,7 @@ export default {
                 }
             },
             immediate: true
-        }
+        },
     },
     data() {
         return {
@@ -183,17 +187,13 @@ export default {
             loading_form: false,
             loading_table: false,
             reportVisible: false,
-            // uploadVisible: false,
             deleteVisible: false,
-            
-            deleteAll:false,
+            deleteTableName: '',
             modelList: [],
             seasonList: [],
             templateTable: [],
             oldModelId: '',
-            // currentRow: {},
-            // uploadUrl: 'http://192.168.1.22:9001/govern/importData',
-            // uploadUrl: 'http://192.168.1.16:8000/upload',
+            timer: null,
             form: {
                 name: '',
                 modelId: '',
@@ -224,6 +224,8 @@ export default {
             this.isChecking = false;
             this.modelList = [];
             this.templateTable = [];
+            this.oldModelId = '';
+            clearTimeout(this.timer);
             this.form = {
                 name: '',
                 modelId: '',
@@ -237,6 +239,31 @@ export default {
             this.$emit('updateVisible', false)
         },
         async getPlan() {
+            let data = await getPlanApi(this.planId)
+            if(!data.length) return
+            this.templateTable = this.handleData(data)
+
+            /**
+             * 正在导入的数据时，用户刷新页面，此时通过轮询查询导入结果
+             * 导入的文件较大，时间较长，分两个阶段。
+             * 阶段 1 从前端上传文件到后端，此时刷新页面，文件传输失败，只能重新导入（后续考虑做断点续传）
+             * 阶段 2 后端文件接收完成后，需要读取文件数据，分析数据，此时刷新页面，可通过'导入中'状态实现 ui 返显，并提示结果
+             */
+            clearTimeout(this.timer)
+            if(this.hasUploading) {
+                this.timer = setTimeout(() => {
+                    this.getPlan()
+                }, 5000);
+            }
+
+            this.form.modelId = data[0].computeMode;
+            this.oldModelId = data[0].computeMode;
+            let [year, season] = this.handlePeriod(data[0].computingCycle)
+            this.form.year = year;
+            this.form.season = season;
+        },
+        
+        handleData(data) {
             /**
              * 后端设置的状态 status 参考
              * 
@@ -247,30 +274,39 @@ export default {
              * 校验失败
              * 已校验
              */
-            let data = await getPlanApi(this.planId)
-            if(!data.length) return
             data.forEach((item,index)=>{
                 item.canUpload = !!item.computingCycle // 判断是否有计算周期（有则表明数据已入库，可以导入数据表）
-                item.canCheck = item.status == '已导入'
                 item.canDownload = item.status == '已校验'
                 item.canDelete = item.status == '已导入' || item.status == '校验失败' || item.status == '已校验'
                 item.showCheck = item.tableType == '2'  // 1是基本数据表，不需要校验， 2是运行数据表，需要校验
-                item.uploadVisible = this.templateTable?.[index]?.uploadVisible || false
                 item.isUploading = (item.status == '导入中')
+                item.uploadVisible = (this.templateTable?.[index]?.uploadVisible || false)
             })
-            this.templateTable = data;
-
-            this.form.modelId = data[0].computeMode;
-            this.oldModelId = data[0].computeMode;
-            let [year, season] = this.handlePeriod(data[0].computingCycle)
-            this.form.year = year;
-            this.form.season = season;
+            // 处理轮询时，导入结束，提示相应信息
+            this.templateTable.forEach((item,index)=>{
+                if(item['status'] == '导入中'){
+                    if(data[index]['status'] == '已导入'){
+                        // 防止多个任务同时完成，提示框会重叠。包裹在 settimeout 中防止重叠
+                        setTimeout(() => {
+                            // 成功
+                            this.templateTable[index].uploadVisible = false;
+                            this.$message.success(item.tableName+'，导入成功！');
+                        }, 0);
+                    }else if(data[index]['status'] == '导入失败'){
+                        setTimeout(() => {
+                            // 失败
+                            this.$message.error(item.tableName+'，导入失败！');
+                        }, 0);
+                    }
+                }
+            })
+            return data;
         },
         handlePeriod(str){
             /**
              * 在方案详情中，没有计算周期的字段，使用computingCycle字段拆解获取
              * 
-             * 后端设置的春夏秋冬 ID 参考
+             * 后端设置的春季 夏季 秋季 冬季 ID 参考
              * 03-01;05-31
              * 06-01;08-31
              * 09-01;11-30
@@ -288,33 +324,35 @@ export default {
                 this.getPlan()
             }
         },
+        testClick() {
+            //
+        },
         updateVisible(val) {
             this.reportVisible = val;
         },
-        showUploadDialog(i, row) {
-            // this.currentRow = row;
+        showUploadDialog(i) {
             this.templateTable[i].uploadVisible = true;
         },
         updateUploadVisible(i, val) {
             this.templateTable[i].uploadVisible = val;
         },
-        uploadSucess(i) {
+        uploadSucess(i, msg) {
+            this.$message.success(msg);
             this.getPlan();
-            this.templateTable[i].isUploading = false;
         },
-        uploadError(i) {
+        uploadError(i, msg) {
+            this.$message.error(msg);
             this.getPlan();
-            this.templateTable[i].isUploading = false;
         },
         uploading(i) {
             this.templateTable[i].isUploading = true;
         },
         async onChangeModel() {
-
             this.loading_table = true;
             if(this.oldModelId == this.form.modelId) {
                 this.getPlan()
             } else{
+                clearTimeout(this.timer)
                 this.templateTable = await getTemplateApi(this.form.modelId);
             }
             this.loading_table = false;
@@ -333,11 +371,11 @@ export default {
             this.isChecking = true;
         },
         
-        showDeleteDialog(id){
-            if(id) {
+        showDeleteDialog(row){
+            if(row?.tableId) {
                 // 
             }
-            this.deleteAll = !id;
+            this.deleteTableName = row?.tableName ? row.tableName : '所有记录';
             this.deleteVisible = true;
         },
         deleteData() {
