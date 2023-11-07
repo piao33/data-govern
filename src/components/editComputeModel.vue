@@ -87,7 +87,7 @@
                     width="200">
                     <template slot-scope="scope">
                         <el-button :disabled="isChecking || !scope.row.canUpload" @click="showUploadDialog(scope.$index)" type="text">导入</el-button>
-                        <el-button v-if="scope.row.showCheck" :disabled="isChecking || !allUpload" type="text" @click="checkData">校验</el-button>
+                        <el-button v-if="scope.row.showCheck" :disabled="isChecking || !allUpload" type="text" @click="checkData(scope.row)">校验</el-button>
                         <el-button :disabled="isChecking || !scope.row.canDownload" type="text">导出</el-button>
                         <el-button :disabled="isChecking || !scope.row.canDelete" type="text" @click="showDeleteDialog(scope.row)">删除</el-button>
                     </template>
@@ -131,7 +131,7 @@
 <script>
 import governanceReport from  './governanceReport.vue'
 import uploadDialog from './uploadDialog.vue'
-import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi } from '../api/index.js'
+import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi, checkDataApi } from '../api/index.js'
 export default {
     name: 'editComputeModel',
     components: {
@@ -367,9 +367,15 @@ export default {
                 this.reportVisible = true;
             }
         },
-        checkData() {
-            this.checkingVisible = true;
+        async checkData(row) {
+            // this.checkingVisible = true;
             this.isChecking = true;
+            let {code , msg} = await checkDataApi(row.startDate, row.endDate, row.errorIds, row.tableId, this.planId)
+            if(code == 200) {
+                this.$message.success(msg || '校验完成')
+            }
+            this.isChecking = false;
+
         },
         
         showDeleteDialog(row){

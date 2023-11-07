@@ -60,6 +60,20 @@ function uploadFileApi({file, planId=1, tableId=1, onUploadProgress}) {
     })
 }
 
+// 校验数据
+function checkDataApi(startDate, endDate, errorIds, tableId, planId) {
+    return requests({
+        method: 'post',
+        url: `/govern/checkData`,
+        data: {
+            startDate,
+            endDate,
+            errorIds,
+            tableId,
+            planId,
+        }
+    })
+}
 
 function getCheckResultApi(mid) {
     return requests({
@@ -101,6 +115,7 @@ export {
     savePlanApi,
     getPlanApi,
     uploadFileApi,
+    checkDataApi,
 
     getCheckResultApi,
     getAnomalieTypeApi,
