@@ -59,18 +59,18 @@
                 <el-button class="large-btn-120 right20" :disabled="disableSave" type="primary" @click="savePlan">保存</el-button>
                 <el-button class="large-btn-120 right20" :disabled="isChecking" type="primary" @click="close">评估</el-button>
             </div>
-            <div class="line" v-if="templateTable.length"></div>
-            <div class="tablebtn-box" v-if="templateTable.length">
+            <div class="line"></div>
+            <div class="tablebtn-box">
                 <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !allUpload" @click="checkData">批量校验</el-button>
                 <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasChecked" @click="close">批量导出</el-button>
                 <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasUpload" @click="showDeleteDialog()">批量删除</el-button>
-                <el-button class="large-btn-120 right20" @click="testClick">测试按钮</el-button>
+                <!-- <el-button class="large-btn-120 right20" @click="testClick">测试按钮</el-button> -->
                 <el-button class="large-btn-140" :disabled="!isChecking && !hasChecked" type="primary" @click="showReport">
                     <i v-if="isChecking" class="el-icon-loading"></i>
                     {{ isChecking ? '数据治理中...' : '治理结果查看' }}
                 </el-button>
             </div>
-            <el-table :data="templateTable" v-if="templateTable.length" border multipleTable v-loading="loading_table">
+            <el-table :data="templateTable" border multipleTable v-loading="loading_table">
                 <el-table-column type="index" label="序号" width="50" align="center"></el-table-column>
                 <el-table-column property="tableName" label="数据项" width="280" align="center"></el-table-column>
                 <el-table-column property="computingCycle" label="计算周期" align="center" min-width="180"></el-table-column>
@@ -155,7 +155,8 @@ export default {
             return this.templateTable.some(item => item.status && item.status == '已校验')
         },
         allUpload() {
-            return this.templateTable.every(item => item.status && (item.status == '已导入' || item.status == '已校验'))
+            // 陷阱：every 函数在数组为空时总是返回true。
+            return this.templateTable.length && this.templateTable.every(item => item.status && (item.status == '已导入' || item.status == '已校验'))
         },
         hasUploading() {
             return this.templateTable.some(item => item.isUploading)
