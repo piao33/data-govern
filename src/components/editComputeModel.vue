@@ -9,6 +9,10 @@
             top="5vh"
             width="90%"
         >
+
+                <input type="file" @change="testchange">
+                <button type="submit" @click="testClick">上传</button>
+
             <el-form :model="form" label-position="right" v-loading="loading_form">
                 <el-row>
                     <el-col :span="8">
@@ -131,6 +135,7 @@
 <script>
 import governanceReport from  './governanceReport.vue'
 import uploadDialog from './uploadDialog.vue'
+import BigUpload from '../upload/index'
 import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi, checkDataApi } from '../api/index.js'
 export default {
     name: 'editComputeModel',
@@ -180,8 +185,12 @@ export default {
             immediate: true
         },
     },
+    beforeDestroy() {
+        clearTimeout(this.timer)
+    },
     data() {
         return {
+            testFile: null,
             planId: 519,
             isChecking: false,
             checkingVisible: false,
@@ -325,8 +334,13 @@ export default {
                 this.getPlan()
             }
         },
+        testchange(e) {
+            console.log(e.target.files[0])
+            this.testFile = e.target.files[0]
+        },
         testClick() {
-            //
+            let bupload = new BigUpload(this.testFile);
+            bupload.sliceUpload();
         },
         updateVisible(val) {
             this.reportVisible = val;

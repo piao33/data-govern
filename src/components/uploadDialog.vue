@@ -54,6 +54,7 @@
 
 <script>
 import { uploadFileApi } from '../api/index.js'
+import BigUpload from '../upload/index'
 
 export default {
     name: 'uploadDialog',
