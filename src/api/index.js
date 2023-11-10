@@ -61,7 +61,7 @@ function uploadFileApi({file, planId=1, tableId=1, onUploadProgress}) {
 }
 
 // 校验数据
-function checkDataApi(startDate, endDate, errorIds, tableId, planId) {
+function checkDataApi(startDate, endDate, errorIds, tableId, planId,devClass) {
     return requests({
         method: 'post',
         url: `/govern/checkData`,
@@ -71,6 +71,7 @@ function checkDataApi(startDate, endDate, errorIds, tableId, planId) {
             errorIds,
             tableId,
             planId,
+            devClass,
         }
     })
 }

@@ -382,7 +382,7 @@ export default {
         async checkData(row) {
             // this.checkingVisible = true;
             this.isChecking = true;
-            let {code , msg} = await checkDataApi(row.startDate, row.endDate, row.errorIds, row.tableId, this.planId)
+            let {code , msg} = await checkDataApi(row.startDate, row.endDate, row.errorIds, row.tableId, this.planId, row.devClass)
             if(code == 200) {
                 this.$message.success(msg || '校验完成')
             }
