@@ -4,16 +4,22 @@ export default class BigUpload {
     md5 = '';
     chunkSize = 1 * 1024 * 1024; // 分割文件大小为3MB
     maxConnect = 4; // 请求并发数量
-    currentChunk = 0;
+    connectCount = 0;// 已经连接的请求数量
+    uploadResult = []; // 记录上传结果
+    maxRetry = 3;// 请求失败最大重试数
+    completed_count = 0; // 已完成的请求数
     generate = null;
+
     
-    constructor(file) {
+    constructor(file, request, callback) {
         if(!(file instanceof File)){
-            throw new Error('BigUpload class acept File type Object')
+            throw new Error('BigUpload class accept File type Object')
         }
         this.file = file;
+        this.request = request;
+        this.generate = this.loadNext();
+        this.callback = callback;
         this.filechunks = this.makeFileChunks();
-        console.log(this.filechunks)
     }
 
     makeFileChunks () {
@@ -41,76 +47,92 @@ export default class BigUpload {
 
                 if(e.data?.percent === 100 && e.data?.md5) {
                     this.md5 = e.data.md5;
-                    console.log(this.md5)
                     resolve(this.md5)
                 }
             }
         })
     }
 
-    mockApi(data) {
-        return new Promise(resolve=>{
-            setTimeout(() => {
-                console.log('mockapi', data.index)
-                resolve({code: 200, msg: 'success', index: data.index})
-            }, (Math.random()* 2 + 1) * 1000);
-        })
-    }
 
-    async sliceUpload() {
-        this.generate = this.loadNext();
+    async startUpload(res) {
         this.generate.next();
+        if(res) {
+            this.completed_count++;
+            res.percent = (this.completed_count / this.filechunks.length).toFixed(2) * 100
+        }
+        this.callback(res)
     }
-
-    * loadNext() {
-        let result = []
-        let runtimeApi = 0;
-        for(let i = 0; i < this.filechunks.length; i++) {
-            runtimeApi++;
-            console.log('index', i, runtimeApi)
-            
-            this.mockApi({index:i}).then(res=>{
-                result.push(res)
-                if(runtimeApi >= this.maxConnect){
-                    this.generate.next()
-                    this.runtimeApi --;
+    handleApi(index) {
+        this.request({index})
+            .then(res=>{
+                this.connectCount--;
+                if(this.uploadResult[index]) {
+                    this.uploadResult[index].type = res.msg;
+                    this.uploadResult[index].data = res;
+                }else{
+                    this.uploadResult[index] = {
+                        type: 'success',
+                        retryNum: 0,
+                        data: res
+                    }
                 }
+                this.startUpload(res)
             })
-            if(runtimeApi >= this.maxConnect) {
+            .catch(err =>{
+                if(this.uploadResult?.[index]?.retryNum >= this.maxRetry) {
+                    this.connectCount--;
+                    return this.startUpload(err);
+                }
+
+                if(this.uploadResult[index]){
+                    this.uploadResult[index].retryNum += 1
+                }else{
+                    this.uploadResult[index] = {
+                        type: 'error',
+                        retryNum: 1,
+                        data: err
+                    }
+                }
+                this.handleApi(index)
+            })
+            .finally(()=>{
+                
+            })
+    }
+    /**
+     * 同时上传 maxConnect 数量的文件，任意 api 有返回结果，（失败重试，成功则开始下一个上传任务）。
+     */
+    * loadNext() {
+        this.connectCount = 0;
+        for(var i = 0; i < this.filechunks.length; i++) {
+            this.connectCount++
+            if(this.connectCount > this.maxConnect) {
                 yield;
             }
+            this.handleApi(i);
         }
+        yield * new Array(this.maxConnect)
+        console.log('connectCount:', this.connectCount)
+        console.log('uploadresult:', this.uploadResult)
     }
 }
 
 
+// 调用示例：
 
-// function computedMD5(file) {
-//     return new Promise((resolve, reject) => {
-//         const spark = new SparkMD5.ArrayBuffer()
-//         const reader = new FileReader()
-//         const chunks = getFileChuncks(file.size)
-//         let current_chunk = 0
-//         reader.onload = (e) => {
-//             spark.append(e?.target?.result)
-//             current_chunk++
-//             if(current_chunk < chunks.length) {
-//                 loadNext()
-//             }else {
-//                 resolve(spark.end())
+// function mockApi(data) {
+//     return new Promise((resolve, reject)=>{
+//         setTimeout(() => {
+//             if(Math.random() < 0.2) {
+//                 reject({code: 500, msg: 'error', index: data.index})
+//             }else{
+//                 resolve({code: 200, msg: 'success', index: data.index})
 //             }
-//         }
-//         reader.onerror = (error) => {
-//             console.log(error)
-//             reject('computed fail')
-//         }
-//         function loadNext() {
-//             const start = (Math.ceil(chunks[current_chunk] / CHUNK_SIZE) - 1) * CHUNK_SIZE
-//             const end = chunks[current_chunk]
-//             reader.readAsArrayBuffer(slice.call(file, start, end))
-//         }
-//         loadNext()
+//         }, (Math.random()* 2 + 1) * 1000);
 //     })
 // }
-
-
+// function callback(res) {
+//     console.log('callback', res)
+// }
+// let bupload = new BigUpload(this.testFile, mockApi, callback);
+// bupload.startUpload();

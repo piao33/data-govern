@@ -9,9 +9,8 @@
             top="5vh"
             width="90%"
         >
-
-                <input type="file" @change="testchange">
-                <button type="submit" @click="testClick">上传</button>
+                <!-- <input type="file" @change="testchange">
+                <button type="submit" @click="testClick">上传</button> -->
 
             <el-form :model="form" label-position="right" v-loading="loading_form">
                 <el-row>
@@ -190,7 +189,7 @@ export default {
     },
     data() {
         return {
-            testFile: null,
+            // testFile: null,
             planId: 519,
             isChecking: false,
             checkingVisible: false,
@@ -336,11 +335,10 @@ export default {
         },
         testchange(e) {
             console.log(e.target.files[0])
-            this.testFile = e.target.files[0]
+            // this.testFile = e.target.files[0]
         },
         testClick() {
-            let bupload = new BigUpload(this.testFile);
-            bupload.sliceUpload();
+            
         },
         updateVisible(val) {
             this.reportVisible = val;
