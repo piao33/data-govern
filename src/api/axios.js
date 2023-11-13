@@ -5,14 +5,15 @@ import qs from 'qs';
 const instance = axios.create({
     // baseURL: 'https://mock.apifox.cn/m1/3432133-0-default',
     timeout: 10000,
-    headers: {Content_type: 'application/x-www-form-urlencoded',},
+    headers: {"Content-type": 'application/x-www-form-urlencoded',},
 });
 
 // 请求拦截器
 instance.interceptors.request.use(function(config) {
     // 在请求发出前做些操作
-    // config.data = qs.stringify(config.data)
-    // console.log(config)
+    if(config.headers['Content-Type'] != 'multipart/form-data') {
+        config.data = qs.stringify(config.data)
+    }
     return config;
 },function(error){
     console.log(error)

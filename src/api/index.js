@@ -61,17 +61,26 @@ function uploadFileApi({file, planId=1, tableId=1, onUploadProgress}) {
 }
 
 // 校验数据
-function checkDataApi(startDate, endDate, errorIds, tableId, planId,devClass) {
+function checkDataApi(tableId, planId) {
     return requests({
         method: 'post',
         url: `/govern/checkData`,
+        timeout: 60 * 10 * 1000,
         data: {
-            startDate,
-            endDate,
-            errorIds,
             tableId,
             planId,
-            devClass,
+        }
+    })
+}
+
+// 批量校验数据
+function checkAllDataApi(planId) {
+    return requests({
+        method: 'post',
+        url: `/govern/checkAllData`,
+        timeout: 60 * 10 * 1000,
+        data: {
+            planId,
         }
     })
 }
@@ -117,6 +126,7 @@ export {
     getPlanApi,
     uploadFileApi,
     checkDataApi,
+    checkAllDataApi,
 
     getCheckResultApi,
     getAnomalieTypeApi,

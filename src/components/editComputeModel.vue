@@ -19,7 +19,7 @@
                     </el-col>
                     <el-col :span="8">
                         <el-form-item label="计算模式:" label-width="160px">
-                            <el-select style="width: 100%" :disabled="hasChecked || isChecking" v-model="form.modelId" placeholder="请选择计算模式" @change="onChangeModel">
+                            <el-select style="width: 100%" :disabled="disableSave" v-model="form.modelId" placeholder="请选择计算模式" @change="onChangeModel">
                                 <el-option :label="item.dictLabel" :value="item.dictValue" v-for="item in modelList" :key="item.id"></el-option>
                             </el-select>
                         </el-form-item>
@@ -35,7 +35,7 @@
                         <el-form-item label="计算期:" label-width="100px">
                             <el-col :span="12">
                                 <el-date-picker
-                                    :disabled="hasChecked || isChecking" 
+                                    :disabled="disableSave" 
                                     style="width: 100%"
                                     v-model="form.year"
                                     type="year"
@@ -43,7 +43,7 @@
                                 </el-date-picker>
                             </el-col>
                             <el-col :span="11" :offset="1">
-                                <el-select v-model="form.season" placeholder="季节" :disabled="hasChecked || isChecking" >
+                                <el-select v-model="form.season" placeholder="季节" :disabled="disableSave" >
                                     <el-option :label="item.dictLabel" :value="item.dictValue" v-for="item in seasonList" :key="item.dictValue"></el-option>
                                 </el-select>
                             </el-col>
@@ -62,9 +62,9 @@
             </div>
             <div class="line"></div>
             <div class="tablebtn-box">
-                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !allUpload" @click="checkData">批量校验</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="!canAllCheck" @click="checkAllData">批量校验</el-button>
                 <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasChecked" @click="close">批量导出</el-button>
-                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !hasUpload" @click="showDeleteDialog()">批量删除</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="isChecking || !canDelete" @click="showDeleteDialog()">批量删除</el-button>
                 <!-- <el-button class="large-btn-120 right20" @click="testClick">测试按钮</el-button> -->
                 <el-button class="large-btn-140" :disabled="!isChecking && !hasChecked" type="primary" @click="showReport">
                     <i v-if="isChecking" class="el-icon-loading"></i>
@@ -79,18 +79,19 @@
                 <el-table-column property="verifiesTime" label="校验时间" align="center"></el-table-column>
                 <el-table-column label="状态" width="100" align="center">
                     <template slot-scope="scope">
-                        <i v-if="scope.row.isUploading" class="el-icon-loading"></i>
-                        <span>{{ scope.row.isUploading ? '导入中' : scope.row.status }}</span>
+                        <i v-if="scope.row.isUploading || scope.row.isChecking" class="el-icon-loading"></i>
+                        <span>{{ scope.row.isUploading ? '导入中' : scope.row.isChecking ? '校验中' : scope.row.status }}</span>
                     </template>
                 </el-table-column>
                 <el-table-column
+                    align="center"
                     label="操作"
                     width="200">
                     <template slot-scope="scope">
-                        <el-button :disabled="isChecking || !scope.row.canUpload" @click="showUploadDialog(scope.$index)" type="text">导入</el-button>
-                        <el-button v-if="scope.row.showCheck" :disabled="isChecking || !allUpload" type="text" @click="checkData(scope.row)">校验</el-button>
-                        <el-button :disabled="isChecking || !scope.row.canDownload" type="text">导出</el-button>
-                        <el-button :disabled="isChecking || !scope.row.canDelete" type="text" @click="showDeleteDialog(scope.row)">删除</el-button>
+                        <el-button :disabled="isChecking || !scope.row.canUpload || hasCheckStatus" @click="showUploadDialog(scope.$index)" type="text">导入</el-button>
+                        <el-button v-if="scope.row.isRuntimeTable" :disabled="!hasAllUpload || !scope.row.canCheck || scope.row.isChecking" type="text" @click="checkData(scope.row)">校验</el-button>
+                        <el-button v-if="scope.row.isRuntimeTable" :disabled="!scope.row.canDownload" type="text">导出</el-button>
+                        <el-button :disabled="isChecking || !scope.row.canDelete || scope.row.isUploading" type="text" @click="showDeleteDialog(scope.row)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -140,7 +141,7 @@
 <script>
 import governanceReport from  './governanceReport.vue'
 import uploadDialog from './uploadDialog.vue'
-import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi, checkDataApi } from '../api/index.js'
+import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi, checkDataApi, checkAllDataApi } from '../api/index.js'
 export default {
     name: 'editComputeModel',
     components: {
@@ -162,18 +163,42 @@ export default {
             || this.templateTable.some(item => !!item.impTime || item.status == '导入中') 
             || !this.canChangeModel
         },
-        hasUpload() {
-            return this.templateTable.some(item => !!item.impTime)
-        },
         hasChecked() {
-            return this.templateTable.some(item => item.status && item.status == '已校验')
+            return this.templateTable.some(item => item.status == '已校验')
         },
-        allUpload() {
+        hasCheckStatus() {
+            return this.templateTable.some(item => item.status == '已校验' || item.status == '校验中' || item.status == '校验失败')
+        },
+        hasAllUpload() {
+            let importList = ['已导入', '已校验', '校验中', '校验失败']
+            return this.templateTable.length && this.templateTable.every(item => importList.includes(item.status))
+        },
+        canAllCheck() {
             // 陷阱：every 函数在数组为空时总是返回true。
-            return this.templateTable.length && this.templateTable.every(item => item.status && (item.status == '已导入' || item.status == '已校验'))
+            let runTimeTable = this.templateTable.filter(item => item.isRuntimeTable)
+            if(runTimeTable.some(item => item.status == '已导入' || item.status == '校验失败')) {
+                return  true;
+            }
+            if(this.templateTable.length && this.templateTable.every(item => item.status == '已导入')){
+                return  true;
+            }
+            return false;
+            // return this.templateTable.length && this.templateTable.every(item => {
+            //     if(item.isRuntimeTable) {
+            //         return item.status == '校验失败'
+            //     }else {
+            //         return item.status == '已导入'
+            //     }
+            // })
         },
         hasUploading() {
             return this.templateTable.some(item => item.isUploading)
+        },
+        isChecking() {
+            return this.templateTable.some(item => item.isChecking)
+        },
+        canDelete() {
+            return this.templateTable.some(item => item.canDelete)
         },
         showDialog: {
             get() {
@@ -200,7 +225,6 @@ export default {
     data() {
         return {
             planId: 519,
-            isChecking: false,
             checkingVisible: false,
             loading_form: false,
             loading_table: false,
@@ -239,12 +263,13 @@ export default {
                 this.form.season = seasonRows[0].dictValue
             }
             this.loading_form = false
+            this.loading_table = true;
             await this.getPlan();
+            this.loading_table = false;
             this.changeSaveStatus()
             this.hasSavedFn();
         },
         destory() {
-            this.isChecking = false;
             this.modelList = [];
             this.templateTable = [];
             this.oldModelId = '';
@@ -293,6 +318,11 @@ export default {
                     this.getPlan()
                 }, 5000);
             }
+            if(this.isChecking) {
+                this.timer = setTimeout(() => {
+                    this.getPlan()
+                }, 5000);
+            }
 
             this.form.modelId = data[0].computeMode;
             this.oldModelId = data[0].computeMode;
@@ -316,11 +346,13 @@ export default {
                 item.canUpload = !!item.computingCycle // 判断是否有计算周期（有则表明数据已入库，可以导入数据表）
                 item.canDownload = item.status == '已校验'
                 item.canDelete = item.status == '已导入' || item.status == '校验失败' || item.status == '已校验'
-                item.showCheck = item.tableType == '2'  // 1是基本数据表，不需要校验， 2是运行数据表，需要校验
+                item.canCheck = item.status == '已导入' || item.status == '校验失败'
+                item.isRuntimeTable = item.tableType == '2'  // 1是基本数据表，不需要校验， 2是运行数据表，需要校验
                 item.isUploading = (item.status == '导入中')
+                item.isChecking = (item.status == '校验中')
                 item.uploadVisible = (this.templateTable?.[index]?.uploadVisible || false)
             })
-            // 处理轮询时，导入结束，提示相应信息
+            // 处理轮询时，导入结束和校验结束，提示相应信息
             this.templateTable.forEach((item,index)=>{
                 if(item['status'] == '导入中'){
                     if(data[index]['status'] == '已导入'){
@@ -334,6 +366,19 @@ export default {
                         setTimeout(() => {
                             // 失败
                             this.$message.error(item.tableName+'，导入失败！');
+                        }, 0);
+                    }
+                }else if(item['status'] == '校验中') {
+                    if(data[index]['status'] == '已校验'){
+                        // 防止多个任务同时完成，提示框会重叠。包裹在 settimeout 中防止重叠
+                        setTimeout(() => {
+                            // 成功
+                            this.$message.success(item.tableName+'，校验完成！');
+                        }, 0);
+                    }else if(data[index]['status'] == '校验失败'){
+                        setTimeout(() => {
+                            // 失败
+                            this.$message.error(item.tableName+'，校验失败！');
                         }, 0);
                     }
                 }
@@ -416,12 +461,45 @@ export default {
         },
         async checkData(row) {
             // this.checkingVisible = true;
-            this.isChecking = true;
-            let {code , msg} = await checkDataApi(row.startDate, row.endDate, row.errorIds, row.tableId, this.planId, row.devClass)
+            // this.isChecking = true;
+            row.isChecking = true;
+            let {code , msg} = await checkDataApi(row.tableId, this.planId)
             if(code == 200) {
-                this.$message.success(msg || '校验完成')
+                this.$message.success(row.tableName + '，'+(msg || '校验完成'))
+            }else{
+                this.$message.error(row.tableName + '，'+(msg || '校验失败'))
             }
-            this.isChecking = false;
+            this.getPlan()
+            // this.isChecking = false;
+
+        },
+        async checkAllData() {
+            // this.templateTable = this.templateTable.map(item => {
+            //     if(item.isRuntimeTable && (item.status == '已导入' || item.status == '校验失败')){
+            //         item.isChecking = true;
+            //         item.status == '校验中'
+            //     }
+            //     return item;
+            // })
+            for(let i= 0; i < this.templateTable.length; i++){
+                let item = this.templateTable[i]
+                if(item.isRuntimeTable && (item.status == '已导入' || item.status == '校验失败')){
+                    // console.log('in for')
+                    // item.isChecking = true;
+                    // item.status == '校验中'
+                    // this.$set(this.templateTable, i, item)
+                    this.templateTable[i].status = '校验中'
+                    this.templateTable[i].isChecking = true
+                }
+            }
+            let {code , msg} = await checkAllDataApi(this.planId)
+            if(code == 200) {
+                this.$message.success( msg || '批量校验完成')
+            }else{
+                this.$message.error(msg || '批量校验失败')
+            }
+            this.getPlan()
+            // this.isChecking = false;
 
         },
         
