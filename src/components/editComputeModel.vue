@@ -1,5 +1,5 @@
 <template>
-    <div class="content">
+    <div class="editcompute">
         <el-dialog 
             title="评估方案编辑" 
             :visible.sync="showDialog" 
@@ -9,8 +9,6 @@
             top="5vh"
             width="90%"
         >
-                <!-- <input type="file" @change="testchange">
-                <button type="submit" @click="testClick">上传</button> -->
 
             <el-form :model="form" label-position="right" v-loading="loading_form">
                 <el-row>
@@ -59,7 +57,7 @@
                 </el-row>
             </el-form>
             <div class="formbtn-box">
-                <el-button class="large-btn-120 right20" :disabled="disableSave" type="primary" @click="savePlan">保存</el-button>
+                <el-button class="large-btn-120 right20" :disabled="disableSave" type="primary" @click="showSaveDialog">保存</el-button>
                 <el-button class="large-btn-120 right20" :disabled="isChecking" type="primary" @click="close">评估</el-button>
             </div>
             <div class="line"></div>
@@ -122,6 +120,14 @@
             </span>
         </el-dialog>
 
+        <el-dialog title="提 示" :append-to-body="true" :visible.sync="changeModelVisible" width="500px" center>
+            <h2 style="text-align: center">该操作会覆盖之前的计算模式，是否继续？</h2>
+            <span slot="footer" class="dialog-footer">
+                <el-button type="primary" @click="savePlan">确 认</el-button>
+                <el-button @click="changeModelVisible = false">取 消</el-button>
+            </span>
+        </el-dialog>
+
         <el-dialog title="数据治理校验中" center :append-to-body="true" :visible.sync="checkingVisible" width="500px">
             <div class="progress-box">
                 <el-progress :text-inside="true" text-color="#fff" :stroke-width="26" :percentage="70"></el-progress>
@@ -134,7 +140,6 @@
 <script>
 import governanceReport from  './governanceReport.vue'
 import uploadDialog from './uploadDialog.vue'
-import BigUpload from '../upload/index'
 import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi, checkDataApi } from '../api/index.js'
 export default {
     name: 'editComputeModel',
@@ -150,10 +155,15 @@ export default {
     },
     computed: {
         disableSave() {
-            return this.isChecking || !this.form.modelId || !this.form.year || !this.form.season || this.hasChecked
+            return this.isChecking 
+            || !this.form.modelId 
+            || !this.form.year 
+            || !this.form.season
+            || this.templateTable.some(item => !!item.impTime || item.status == '导入中') 
+            || !this.canChangeModel
         },
         hasUpload() {
-            return this.templateTable.some(item => item.status && (item.status == '已导入' || item.status == '已校验'))
+            return this.templateTable.some(item => !!item.impTime)
         },
         hasChecked() {
             return this.templateTable.some(item => item.status && item.status == '已校验')
@@ -189,7 +199,6 @@ export default {
     },
     data() {
         return {
-            // testFile: null,
             planId: 519,
             isChecking: false,
             checkingVisible: false,
@@ -197,6 +206,9 @@ export default {
             loading_table: false,
             reportVisible: false,
             deleteVisible: false,
+            changeModelVisible: false,
+            canChangeModel: false,
+            hasSaved: false,
             deleteTableName: '',
             modelList: [],
             seasonList: [],
@@ -227,7 +239,9 @@ export default {
                 this.form.season = seasonRows[0].dictValue
             }
             this.loading_form = false
-            this.getPlan();
+            await this.getPlan();
+            this.changeSaveStatus()
+            this.hasSavedFn();
         },
         destory() {
             this.isChecking = false;
@@ -235,6 +249,8 @@ export default {
             this.templateTable = [];
             this.oldModelId = '';
             clearTimeout(this.timer);
+            this.canChangeModel = false;
+            this.hasSaved = false;
             this.form = {
                 name: '',
                 modelId: '',
@@ -243,6 +259,19 @@ export default {
                 season: '',
                 maxPower: ''
             };
+        },
+        // 方案下的计算模式更改，是否可以点击保存按钮。
+        // 该方案下的任意计算模式下，只要有一个文件是已导入状态（有导入时间），就不可以点击保存，更改计算模式
+        // 只在初始化进入时，文件导入后，文件删除后 这 3 个场景下调用该方法
+        changeSaveStatus() {
+            this.canChangeModel = !this.templateTable.some(item => !!item.impTime)
+        },
+        // 是否有计算周期。有的话表示该方案下保存过计算模式
+        // 该字段用于在保存计算模式时，是否弹出覆盖之前的计算模式弹框
+        // 如果为 true，弹出。为 false，不谈出
+        // 该方法只在初始化时调用
+        hasSavedFn() {
+            this.hasSaved = this.templateTable.some(item => !!item.computingCycle)
         },
         close() {
             this.$emit('updateVisible', false)
@@ -326,16 +355,21 @@ export default {
             let season = str.replace(reg, '').replace('至', ';');
             return [new Date(year), season]
         },
+        showSaveDialog() {
+            if(this.hasSaved) {
+                this.changeModelVisible = true;
+            }else {
+                this.savePlan();
+            }
+        },
         async savePlan() {
+            this.changeModelVisible = false;
             let year = this.form.year.getFullYear()
             let {code} = await savePlanApi(this.form.modelId, year, this.form.season, this.planId)
             if(code == 200) {
-                this.getPlan()
+                await this.getPlan()
+                this.hasSavedFn();
             }
-        },
-        testchange(e) {
-            console.log(e.target.files[0])
-            // this.testFile = e.target.files[0]
         },
         testClick() {
             
@@ -349,9 +383,10 @@ export default {
         updateUploadVisible(i, val) {
             this.templateTable[i].uploadVisible = val;
         },
-        uploadSucess(i, msg) {
+        async uploadSucess(i, msg) {
             this.$message.success(msg);
-            this.getPlan();
+            await this.getPlan();
+            this.changeSaveStatus()
         },
         uploadError(i, msg) {
             this.$message.error(msg);
@@ -399,6 +434,7 @@ export default {
         },
         deleteData() {
             this.deleteVisible = false;
+            this.changeSaveStatus()
         },
     },
 }
@@ -406,7 +442,7 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-.content /deep/ .el-dialog__body{
+.editcompute /deep/ .el-dialog__body{
     padding-top: 10px;
 }
 
@@ -433,6 +469,13 @@ export default {
 .progress-box{
     position: relative;
     height: 100%;
+}
+.testprogress{
+    transition: all 0.3s linear;
+    background: green;
+    height: 2px;
+    margin: 10px 0;
+
 }
 .progressAni{
     position: absolute;
