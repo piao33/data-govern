@@ -85,6 +85,30 @@ function checkAllDataApi(planId) {
     })
 }
 
+// 删除数据
+function deleteDataApi(tableId, planId) {
+    return requests({
+        method: 'post',
+        url: `/govern/delData`,
+        data: {
+            tableId,
+            planId,
+        }
+    })
+}
+
+// 批量删除数据
+function deleteAllDataApi(planId) {
+    return requests({
+        method: 'post',
+        url: `/govern/delAllData`,
+        data: {
+            planId,
+        }
+    })
+}
+
+
 function getCheckResultApi(mid) {
     return requests({
         method: 'get',
@@ -127,6 +151,8 @@ export {
     uploadFileApi,
     checkDataApi,
     checkAllDataApi,
+    deleteDataApi,
+    deleteAllDataApi,
 
     getCheckResultApi,
     getAnomalieTypeApi,
