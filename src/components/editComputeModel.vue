@@ -182,13 +182,14 @@ export default {
         canAllCheck() {
             // 陷阱：every 函数在数组为空时总是返回true。
             let runTimeTable = this.templateTable.filter(item => item.isRuntimeTable)
-            if(runTimeTable.some(item => item.status == '已导入' || item.status == '校验失败')) {
-                return  true;
-            }
-            if(this.templateTable.length && this.templateTable.every(item => item.status == '已导入')){
-                return  true;
-            }
-            return false;
+            let basicTable = this.templateTable.filter(item => !item.isRuntimeTable)
+            
+            return  runTimeTable.length
+                    && basicTable.length 
+                    && basicTable.every(item => item.status == '已导入')
+                    && runTimeTable.every(item =>  (item.status != '未导入' && !item.isUploading && item.status != '导入失败'))
+                    && runTimeTable.some(item =>  (item.status == '已导入' || item.status == '校验失败') && !item.isChecking)
+           
             // return this.templateTable.length && this.templateTable.every(item => {
             //     if(item.isRuntimeTable) {
             //         return item.status == '校验失败'
@@ -512,13 +513,11 @@ export default {
         },
         async deleteData() {
             let requests = null
-            console.log(this.deleteObject)
             if(this.deleteObject.tableId){
                 requests = deleteDataApi.bind(this, this.deleteObject.tableId, this.planId)
             }else{
                 requests = deleteAllDataApi.bind(this, this.planId)
             }
-            console.log(requests)
             let {code, msg} = await requests()
             if(code == 200) {
                 this.$message.success(msg || `${this.deleteObject.tableName || '批量数据'}，删除成功！`)
@@ -565,13 +564,7 @@ export default {
     position: relative;
     height: 100%;
 }
-.testprogress{
-    transition: all 0.3s linear;
-    background: green;
-    height: 2px;
-    margin: 10px 0;
 
-}
 .progressAni{
     position: absolute;
     left:0;top:0;

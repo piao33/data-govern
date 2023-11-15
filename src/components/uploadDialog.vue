@@ -54,7 +54,6 @@
 
 <script>
 import { uploadFileApi } from '../api/index.js'
-import BigUpload from '../upload/index'
 
 export default {
     name: 'uploadDialog',
@@ -161,10 +160,12 @@ export default {
         },
 
         submitUpload() {
-            this.$refs.upload.submit();
-            this.isUploading = true;
-            this.uploadBySelf = true;
-            this.$emit('uploading', this.index)
+            if(this.filePath) {
+                this.$refs.upload.submit();
+                this.isUploading = true;
+                this.uploadBySelf = true;
+                this.$emit('uploading', this.index)
+            }
         },
         handleChange(file, fileList) {
             if(file.status == 'success') {
