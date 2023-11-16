@@ -8,28 +8,27 @@
                         <i class="el-icon-d-arrow-left" style="color: #0071B7;fontWeight: bolder;"></i>
                     </el-button>
                     <div class="vertical-line"></div>
-                    <el-button type="text">已治理数据批量下载</el-button>
+                    <el-button type="text" @click="download(null)">已治理数据批量下载</el-button>
                 </div>
-                <el-table :data="governReport" border multipleTable>
-                    <el-table-column type="selection" width="50" align="center"></el-table-column>
-                    <el-table-column property="name" label="数据项" align="center"></el-table-column>
-                    <el-table-column property="rowNum" label="数据行数" align="center"></el-table-column>
-                    <el-table-column property="period" label="计算周期" align="center"></el-table-column>
-                    <el-table-column property="validityPeriod" label="有效计算期" align="center"></el-table-column>
+                <el-table :data="governReport" border>
+                    <el-table-column property="tableName" label="数据项" align="center"></el-table-column>
+                    <el-table-column property="rowNums" label="数据行数" align="center"></el-table-column>
+                    <el-table-column property="dayNums" label="计算周期" align="center"></el-table-column>
+                    <el-table-column property="realDayNums" label="有效计算期" align="center"></el-table-column>
                     <el-table-column label="空值占比" align="center">
                         <template slot-scope="scope">
-                            <span>{{ scope.row.nullProportion + '%'}}</span>
+                            <span>{{ scope.row.nullValueProportion}}</span>
                         </template>
                     </el-table-column>
                     <el-table-column label="异常占比" align="center">
                         <template slot-scope="scope">
-                            <span>{{ scope.row.anomalieProportion + '%'}}</span>
+                            <span>{{ scope.row.errorValueProportion}}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column property="executionTime" label="执行时间" align="center"></el-table-column>
+                    <el-table-column property="creatTime" label="执行时间" align="center"></el-table-column>
                     <el-table-column align="center" label="操作" width="100">
                         <template slot-scope="scope">
-                            <el-button @click="handleClick(scope.$index, scope.row)" type="text">下载</el-button>
+                            <el-button @click="download(scope.row.tableId)" type="text">下载</el-button>
                             <el-button type="text" disabled>修改</el-button>
                         </template>
                     </el-table-column>
@@ -46,10 +45,10 @@
                 </el-tooltip>
                 <div class="anomalie">
                     <div class="anomalie-item" v-for="item in anomalieList" :key="item.id">
-                        <img :src="item.imgurl" alt="">
+                        <img src="../assets/data.svg" alt="">
                         <div class="info">
-                            <p>{{ item.type }}</p>
-                            <span>{{ item.count }}项</span>
+                            <p>{{ item.item }}</p>
+                            <span>{{ item.cnt }}项</span>
                         </div>
                         <el-button class="detail-btn" type="text" @click="showItemDetail(item.id)">详情</el-button>
                     </div>
@@ -59,15 +58,15 @@
             </span>
         </el-dialog>
 
-        <governance-detail :checkId="checkId" :visible="detailVisible" @updateVisible="updateDetailVisible"></governance-detail>
+        <governance-detail :checkId="planId" :visible="detailVisible" @updateVisible="updateDetailVisible"></governance-detail>
 
-        <governance-item-detail :checkId="checkId" :visible="itemDetailVisible" @updateVisible="updateItemDetailVisible"></governance-item-detail>
+        <governance-item-detail :checkId="planId" :visible="itemDetailVisible" @updateVisible="updateItemDetailVisible"></governance-item-detail>
         
     </div>
 </template>
 
 <script>
-import { getCheckResultApi } from '../api/index.js'
+import { getCheckResultApi, getErrorCountApi, downloadDataApi, downloadAllDataApi } from '../api/index.js'
 import governanceDetail from '/src/components/governanceDetail'
 import governanceItemDetail from '/src/components/governanceItemDetail'
 
@@ -82,7 +81,7 @@ export default {
             type: Boolean,
             default: false
         },
-        checkId: {
+        planId: {
             type: [Number, String],
             default: '',
         }
@@ -112,8 +111,9 @@ export default {
             loading: false,
             detailVisible: false,
             itemDetailVisible: false,
-            anomalieList: [],
+            pl: [],
             governReport: [],
+            anomalieList: [],
             anomalieDesc: [
                 '数据缺失：是指数据存在单点或者连续点的数据缺失情况',
                 '数据异常1：是指变电站负载功率运行数据范围异常',
@@ -135,10 +135,13 @@ export default {
                 spinner: 'el-icon-loading',
                 background: 'rgba(255, 255, 255, 1)',
             })
-            let {checkList, anomalieList} = await getCheckResultApi(this.checkId);
+            let [{value:checkList}, {value: anomalieList}] = await Promise.allSettled([
+                getCheckResultApi(this.planId), 
+                getErrorCountApi(this.planId)
+            ])
             this.governReport = checkList;
             this.anomalieList = anomalieList.sort((a,b)=> {
-                return b.count - a.count
+                return b.cnt - a.cnt
             });
             loadingInstance.close();
         },
@@ -163,6 +166,25 @@ export default {
         updateItemDetailVisible(val) {
             this.itemDetailVisible = val;
         },
+        async download(tableId) {
+            let requests = null
+            if(tableId){
+                requests = downloadDataApi.bind(this, tableId, this.planId)
+            }else{
+                requests = downloadAllDataApi.bind(this, this.planId)
+            }
+            this.$message.success('下载操作已提交')
+            let {file: blobFile, filename} = await requests()
+
+            let mergeBlob = new Blob([blobFile]);
+
+            let downloadUrl = window.URL.createObjectURL(mergeBlob)
+            
+            let link = document.createElement('a')
+            link.href = downloadUrl
+            link.setAttribute('download', filename)
+            link.click();
+        }
     }
 }
 </script>

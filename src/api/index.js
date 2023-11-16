@@ -65,7 +65,7 @@ function checkDataApi(tableId, planId) {
     return requests({
         method: 'post',
         url: `/govern/checkData`,
-        timeout: 60 * 10 * 1000,
+        timeout: 60 * 30 * 1000,
         data: {
             tableId,
             planId,
@@ -78,7 +78,7 @@ function checkAllDataApi(planId) {
     return requests({
         method: 'post',
         url: `/govern/checkAllData`,
-        timeout: 60 * 10 * 1000,
+        timeout: 60 * 30 * 1000,
         data: {
             planId,
         }
@@ -115,7 +115,7 @@ function downloadDataApi(tableId, planId) {
     return requests({
         method: 'post',
         url: `/govern/export`,
-        timeout: 60 * 10 * 10000,
+        timeout: 60 * 30 * 1000,
         responseType: 'blob',
         data: {
             tableId,
@@ -129,7 +129,7 @@ function downloadAllDataApi(planId) {
     return requests({
         method: 'post',
         url: `/govern/exportAll`,
-        timeout: 60 * 10 * 10000,
+        timeout: 60 * 30 * 1000,
         responseType: 'blob',
         data: {
             planId,
@@ -137,11 +137,25 @@ function downloadAllDataApi(planId) {
     })
 }
 
-
-function getCheckResultApi(mid) {
+// 获取治理结果
+function getCheckResultApi(planId) {
     return requests({
-        method: 'get',
-        url: `https://mock.apifox.cn/m1/3432133-0-default/model/${mid}`,
+        method: 'post',
+        url: `/govern/governReportList`,
+        data: {
+            planId
+        }
+    })
+}
+
+// 获取治理异常分析
+function getErrorCountApi(planId) {
+    return requests({
+        method: 'post',
+        url: `/govern/errorCountStat`,
+        data: {
+            planId
+        }
     })
 }
 
@@ -184,8 +198,9 @@ export {
     deleteAllDataApi,
     downloadDataApi,
     downloadAllDataApi,
-
     getCheckResultApi,
+    getErrorCountApi,
+    
     getAnomalieTypeApi,
     getAnomalieDetailApi,
     getReportOverviewApi,

@@ -73,7 +73,7 @@
             </div>
             <el-table :data="templateTable" border multipleTable v-loading="loading_table">
                 <el-table-column type="index" label="序号" width="50" align="center"></el-table-column>
-                <el-table-column property="tableName" label="数据项" width="280" align="center"></el-table-column>
+                <el-table-column property="tableName" label="数据项" min-width="280" align="center"></el-table-column>
                 <el-table-column property="computingCycle" label="计算周期" align="center" min-width="180"></el-table-column>
                 <el-table-column property="impTime" label="导入时间" align="center"></el-table-column>
                 <el-table-column property="verifiesTime" label="校验时间" align="center"></el-table-column>
@@ -111,7 +111,7 @@
         >
         </upload-dialog>
 
-        <governance-report :modelId="form.modelId" :visible="reportVisible" @updateVisible="updateVisible"></governance-report>
+        <governance-report :planId="planId" :visible="reportVisible" @updateVisible="updateVisible"></governance-report>
 
         <el-dialog title="提 示" :append-to-body="true" :visible.sync="deleteVisible" width="500px" center>
             <h2 style="text-align: center">是否确认删除{{deleteObject.tableName || '所有记录'}}？删除后需重新校验！</h2>

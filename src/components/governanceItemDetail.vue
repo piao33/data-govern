@@ -6,21 +6,36 @@
                 说明：数据缺失是指数据存在一个时间点或者连续时间点的数据缺失情况
             </div>
 
-            <div style="margin: 12px 0;" >
-                <el-select v-model="anomalieIds" style="width: 300px" multiple size="mini" placeholder="异常类型">
-                    <el-option-group
-                        v-for="group in options"
-                        :key="group.label"
-                        :label="group.label">
-                        <el-option
-                            v-for="item in group.options"
-                            :key="item.type"
-                            :label="item.label"
-                            :value="item.id">
-                        </el-option>
-                    </el-option-group>
-                </el-select>
-                <el-button style="margin-left: 20px;" type="primary" size="mini" @click="getGovernanceDetail">查询</el-button>
+            <div style="margin: 16px 0 0;" >
+                <el-form :model="form" label-position="right" size="medium">
+                    <el-row>
+                        <el-col :span="6">
+                            <el-form-item label="数据表:" label-width="60px">
+                                <el-input v-model="form.name" autocomplete="off"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="6">
+                            <el-form-item label="异常类型:" label-width="90px">
+                                <el-select style="width: 100%" v-model="form.type">
+                                    <!-- <el-option :label="item.dictLabel" :value="item.dictValue" v-for="item in modelList" :key="item.id"></el-option> -->
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="6">
+                            <el-form-item label="处理状态:" label-width="90px">
+                                <el-select style="width: 100%" v-model="form.status">
+                                    <!-- <el-option :label="item.dictLabel" :value="item.dictValue" v-for="item in modelList" :key="item.id"></el-option> -->
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="6">
+                            <el-form-item>
+                                <el-button style="margin-left: 40px;" type="primary" @click="getGovernanceDetail">查询</el-button>
+                                <el-button style="margin-left: 20px;" @click="getGovernanceDetail">重置</el-button>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </el-form>
             </div>
 
             <el-table :data="tableList" border v-loading="loading">
@@ -90,17 +105,11 @@ export default {
     data() {
         return {
             loading: false,
-            options: [
-                {
-                    label: '异常类型',
-                    options: []
-                },
-                {
-                    label: '异常字段',
-                    options: []
-                }
-            ],
-            anomalieIds: [],
+            form: {
+                name: '',
+                type: '',
+                status: '',
+            },
             anomalieDetailList: [],
             currentPage: 1,
             pageSize: 10,
@@ -111,24 +120,11 @@ export default {
         async init() {
             this.loading = true;
             let {anomalieType, parameters} = await getAnomalieTypeApi(this.checkId);
-            this.options[0].options = anomalieType;
-            this.options[1].options = parameters;
 
             await this.getGovernanceDetail()
             this.loading = false;
         },
         destory() {
-            this.anomalieIds = [];
-            this.options = [
-                {
-                    label: '异常类型',
-                    options: []
-                },
-                {
-                    label: '异常字段',
-                    options: []
-                }
-            ];
             this.anomalieDetailList = [];
             this.total = 0;
             this.currentPage = 1;
@@ -138,9 +134,8 @@ export default {
             console.log(i, row)
         },
         async getGovernanceDetail() {
-            console.log(this.anomalieIds)
             this.loading = true;
-            this.anomalieDetailList = await getAnomalieDetailApi(this.anomalieIds)
+            this.anomalieDetailList = await getAnomalieDetailApi()
             this.total = this.anomalieDetailList.length;
             this.loading = false;
         },
@@ -154,6 +149,13 @@ export default {
 <style scoped>
 div /deep/ .el-dialog__body{
     padding-top: 0;
+}
+.input-with-select{
+    width: 500px;
+}
+.input-with-select /deep/ .el-input-group__prepend{
+    background-color: #fff;
+    width: 100px;
 }
 
 .pagination {
