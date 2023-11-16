@@ -24,6 +24,17 @@ instance.interceptors.request.use(function(config) {
 // 响应拦截器
 instance.interceptors.response.use(function(response){
     // 对响应数据做操作
+
+    // 处理下载文件时，获取文件名操作
+    const exportUrl = ['/govern/export', '/govern/exportAll']
+    if(exportUrl.includes(response.config.url)) {
+        let filename = response.headers['content-disposition']
+        response.data = {
+            file: response.data,
+            filename: decodeURIComponent(filename).split('filename=')[1]
+        }
+    }
+    
     return response
 },function(error){
     console.log(error)

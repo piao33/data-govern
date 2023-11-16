@@ -90,6 +90,7 @@ function deleteDataApi(tableId, planId) {
     return requests({
         method: 'post',
         url: `/govern/delData`,
+        timeout: 20 * 1000,
         data: {
             tableId,
             planId,
@@ -102,6 +103,34 @@ function deleteAllDataApi(planId) {
     return requests({
         method: 'post',
         url: `/govern/delAllData`,
+        timeout: 20 * 1000,
+        data: {
+            planId,
+        }
+    })
+}
+
+// 导出数据
+function downloadDataApi(tableId, planId) {
+    return requests({
+        method: 'post',
+        url: `/govern/export`,
+        timeout: 60 * 10 * 10000,
+        responseType: 'blob',
+        data: {
+            tableId,
+            planId,
+        }
+    })
+}
+
+// 批量导出数据
+function downloadAllDataApi(planId) {
+    return requests({
+        method: 'post',
+        url: `/govern/exportAll`,
+        timeout: 60 * 10 * 10000,
+        responseType: 'blob',
         data: {
             planId,
         }
@@ -153,6 +182,8 @@ export {
     checkAllDataApi,
     deleteDataApi,
     deleteAllDataApi,
+    downloadDataApi,
+    downloadAllDataApi,
 
     getCheckResultApi,
     getAnomalieTypeApi,

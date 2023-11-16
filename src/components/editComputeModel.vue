@@ -63,8 +63,8 @@
             <div class="line"></div>
             <div class="tablebtn-box">
                 <el-button class="large-btn-120 right20" type="primary" :disabled="!canAllCheck" @click="checkAllData">批量校验</el-button>
-                <el-button class="large-btn-120 right20" type="primary" :disabled="hasChecking || !hasChecked" @click="close">批量导出</el-button>
-                <el-button class="large-btn-120 right20" type="primary" :disabled="hasChecking || !canDelete" @click="showDeleteDialog()">批量删除</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="hasChecking || !hasChecked" @click="download(null)">批量导出</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="hasChecking || !canDelete" @click="showDeleteDialog(null)">批量删除</el-button>
                 <!-- <el-button class="large-btn-120 right20" @click="testClick">测试按钮</el-button> -->
                 <el-button class="large-btn-140" :disabled="!hasChecking && !hasChecked" type="primary" @click="showReport">
                     <i v-if="hasChecking" class="el-icon-loading"></i>
@@ -90,7 +90,7 @@
                     <template slot-scope="scope">
                         <el-button :disabled="hasChecking || !scope.row.canUpload || hasCheckStatus" @click="showUploadDialog(scope.$index)" type="text">导入</el-button>
                         <el-button v-if="scope.row.isRuntimeTable" :disabled="!hasAllUpload || !scope.row.canCheck || scope.row.isChecking" type="text" @click="checkData(scope.row)">校验</el-button>
-                        <el-button v-if="scope.row.isRuntimeTable" :disabled="!scope.row.canDownload" type="text">导出</el-button>
+                        <el-button v-if="scope.row.isRuntimeTable" :disabled="!scope.row.canDownload" @click="download(scope.row.tableId)" type="text">导出</el-button>
                         <el-button :disabled="hasChecking || !scope.row.canDelete || scope.row.isUploading" type="text" @click="showDeleteDialog(scope.row)">删除</el-button>
                     </template>
                 </el-table-column>
@@ -141,8 +141,8 @@
 <script>
 import governanceReport from  './governanceReport.vue'
 import uploadDialog from './uploadDialog.vue'
-import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, 
-    getPlanApi, checkDataApi, checkAllDataApi, deleteDataApi, deleteAllDataApi } from '../api/index.js'
+import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi, checkDataApi, checkAllDataApi,
+     deleteDataApi, deleteAllDataApi, downloadDataApi, downloadAllDataApi} from '../api/index.js'
 export default {
     name: 'editComputeModel',
     components: {
@@ -530,6 +530,24 @@ export default {
             this.deleteVisible = false;
             this.changeSaveStatus()
         },
+        async download(tableId) {
+            let requests = null
+            if(tableId){
+                requests = downloadDataApi.bind(this, tableId, this.planId)
+            }else{
+                requests = downloadAllDataApi.bind(this, this.planId)
+            }
+            let {file: blobFile, filename} = await requests()
+
+            let mergeBlob = new Blob([blobFile]);
+
+            let downloadUrl = window.URL.createObjectURL(mergeBlob)
+            
+            let link = document.createElement('a')
+            link.href = downloadUrl
+            link.setAttribute('download', filename)
+            link.click();
+        }
     },
 }
 </script>
