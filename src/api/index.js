@@ -54,7 +54,7 @@ function uploadFileApi({file, planId=1, tableId=1, onUploadProgress}) {
         data: {
             file, planId, tableId
         },
-        timeout: 60 * 10 * 1000,
+        timeout: 60 * 30 * 1000,
         onUploadProgress,
         headers: {'Content-Type': 'multipart/form-data'}
     })
@@ -90,7 +90,7 @@ function deleteDataApi(tableId, planId) {
     return requests({
         method: 'post',
         url: `/govern/delData`,
-        timeout: 20 * 1000,
+        timeout: 60 * 30 * 1000,
         data: {
             tableId,
             planId,
@@ -103,7 +103,7 @@ function deleteAllDataApi(planId) {
     return requests({
         method: 'post',
         url: `/govern/delAllData`,
-        timeout: 20 * 1000,
+        timeout: 60 * 30 * 1000,
         data: {
             planId,
         }
@@ -200,7 +200,7 @@ export {
     downloadAllDataApi,
     getCheckResultApi,
     getErrorCountApi,
-    
+
     getAnomalieTypeApi,
     getAnomalieDetailApi,
     getReportOverviewApi,

@@ -174,16 +174,20 @@ export default {
                 requests = downloadAllDataApi.bind(this, this.planId)
             }
             this.$message.success('下载操作已提交')
+
             let {file: blobFile, filename} = await requests()
-
-            let mergeBlob = new Blob([blobFile]);
-
-            let downloadUrl = window.URL.createObjectURL(mergeBlob)
-            
-            let link = document.createElement('a')
-            link.href = downloadUrl
-            link.setAttribute('download', filename)
-            link.click();
+            if(blobFile && filename) {
+                let mergeBlob = new Blob([blobFile]);
+    
+                let downloadUrl = window.URL.createObjectURL(mergeBlob)
+                
+                let link = document.createElement('a')
+                link.href = downloadUrl
+                link.setAttribute('download', filename)
+                link.click();
+            }else {
+                this.$message.error('导出失败！')
+            }
         }
     }
 }

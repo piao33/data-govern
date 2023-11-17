@@ -63,10 +63,9 @@
             <div class="line"></div>
             <div class="tablebtn-box">
                 <el-button class="large-btn-120 right20" type="primary" :disabled="!canAllCheck" @click="checkAllData">批量校验</el-button>
-                <el-button class="large-btn-120 right20" type="primary" :disabled="hasChecking || !hasChecked" @click="download(null)">批量导出</el-button>
-                <el-button class="large-btn-120 right20" type="primary" :disabled="hasChecking || !canDelete" @click="showDeleteDialog(null)">批量删除</el-button>
-                <!-- <el-button class="large-btn-120 right20" @click="testClick">测试按钮</el-button> -->
-                <el-button class="large-btn-140" :disabled="!hasChecking && !hasChecked" type="primary" @click="showReport">
+                <el-button class="large-btn-120 right20" type="primary" :disabled="!canAllDownload" @click="download(null)">批量导出</el-button>
+                <el-button class="large-btn-120 right20" type="primary" :disabled="!canAllDelete" @click="showDeleteDialog(null)">批量删除</el-button>
+                <el-button class="large-btn-140" :disabled="hasChecking || hasUploading || hasDeleting || !hasChecked" type="primary" @click="showReport">
                     <i v-if="hasChecking" class="el-icon-loading"></i>
                     {{ hasChecking ? '数据治理中...' : '治理结果查看' }}
                 </el-button>
@@ -79,8 +78,8 @@
                 <el-table-column property="verifiesTime" label="校验时间" align="center"></el-table-column>
                 <el-table-column label="状态" width="100" align="center">
                     <template slot-scope="scope">
-                        <i v-if="scope.row.isUploading || scope.row.isChecking" class="el-icon-loading"></i>
-                        <span>{{ scope.row.isUploading ? '导入中' : scope.row.isChecking ? '校验中' : scope.row.status }}</span>
+                        <i v-if="runningStatus(scope.row)" class="el-icon-loading"></i>
+                        <span>{{ runningStatus(scope.row) || scope.row.status }}</span>
                     </template>
                 </el-table-column>
                 <el-table-column
@@ -88,10 +87,10 @@
                     label="操作"
                     width="200">
                     <template slot-scope="scope">
-                        <el-button :disabled="hasChecking || !scope.row.canUpload || hasCheckStatus" @click="showUploadDialog(scope.$index)" type="text">导入</el-button>
-                        <el-button v-if="scope.row.isRuntimeTable" :disabled="!hasAllUpload || !scope.row.canCheck || scope.row.isChecking" type="text" @click="checkData(scope.row)">校验</el-button>
-                        <el-button v-if="scope.row.isRuntimeTable" :disabled="!scope.row.canDownload" @click="download(scope.row.tableId)" type="text">导出</el-button>
-                        <el-button :disabled="hasChecking || !scope.row.canDelete || scope.row.isUploading" type="text" @click="showDeleteDialog(scope.row)">删除</el-button>
+                        <el-button :disabled="!scope.row.canUpload || scope.row.isDeleting || hasCheckStatus" @click="showUploadDialog(scope.$index)" type="text">导入</el-button>
+                        <el-button v-if="scope.row.isRuntimeTable" :disabled="!hasAllUpload || hasDeleting || hasDownloading || scope.row.canDownload || scope.row.isChecking" type="text" @click="checkData(scope.row)">校验</el-button>
+                        <el-button v-if="scope.row.isRuntimeTable" :disabled="!scope.row.canDownload || hasRunning" @click="download(scope.row.tableId)" type="text">导出</el-button>
+                        <el-button :disabled="!scope.row.canDelete || hasRunning" type="text" @click="showDeleteDialog(scope.row)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -116,7 +115,10 @@
         <el-dialog title="提 示" :append-to-body="true" :visible.sync="deleteVisible" width="500px" center>
             <h2 style="text-align: center">是否确认删除{{deleteObject.tableName || '所有记录'}}？删除后需重新校验！</h2>
             <span slot="footer" class="dialog-footer">
-                <el-button type="primary" @click="deleteData">确 认</el-button>
+                <el-button type="primary" :disabled="deleteLoading" @click="deleteData">
+                    <i v-if="deleteLoading" class="el-icon-loading"></i>
+                    {{ deleteLoading ? '删除中...' : '确 认' }}
+                </el-button>
                 <el-button @click="deleteVisible = false">取 消</el-button>
             </span>
         </el-dialog>
@@ -156,6 +158,20 @@ export default {
         }
     },
     computed: {
+        /**
+         * 
+         * 全部状态：未导入 导入中 导入失败 已导入   校验中 校验失败 已校验    导出中   删除中 
+         * 正常状态流程：未导入=》已导入=》已校验
+         * 
+         * 批量校验条件：全部都是已导入状态及以上，并且至少有一个运行数据表是 导入失败 || 已导入, 并且不能有(校验中 || 导出中 || 删除中)
+         * 批量导出条件：至少有一个运行数据表是已校验状态，并且不能有 (校验中 || 导出中 || 删除中)
+         * 批量删除条件： canDelete ，并且不能有 (校验中 || 导出中 || 删除中)
+         * 
+         * 导入某个表： canUpload && 并且该表不能有 删除中 状态，并且全部表格不能有（校验中||校验失败||已校验）状态
+         * 导出某个表： 该表状态需要是 已校验，并且不能有（删除中|| 校验中||导出中||导入中）状态
+         * 删除某个表：  canDelete ，并且不能有 (校验中 || 导出中 || 删除中)
+         * 校验某个表： 全部表状态需要是 已导入以上状态， 且不能有 (删除中 || 导出中），且该表不能是 已校验和校验中 状态
+         */
         disableSave() {
             return this.hasChecking 
             || !this.form.modelId 
@@ -176,27 +192,26 @@ export default {
             return this.templateTable.some(item => item.status == '已校验' || item.isChecking || item.status == '校验失败')
         },
         hasAllUpload() {
-            let importList = ['已导入', '已校验', '校验失败']
-            return this.templateTable.length && this.templateTable.every(item => importList.includes(item.status) || item.isChecking)
+            let importList = ['未导入', '导入失败']
+            return this.templateTable.length && this.templateTable.every(item => !importList.includes(item.status) && !item.isUploading)
         },
         canAllCheck() {
             // 陷阱：every 函数在数组为空时总是返回true。
             let runTimeTable = this.templateTable.filter(item => item.isRuntimeTable)
             let basicTable = this.templateTable.filter(item => !item.isRuntimeTable)
             
-            return  runTimeTable.length
+            return  !this.hasRunning 
+                    && runTimeTable.length
                     && basicTable.length 
                     && basicTable.every(item => item.status == '已导入')
                     && runTimeTable.every(item =>  (item.status != '未导入' && !item.isUploading && item.status != '导入失败'))
                     && runTimeTable.some(item =>  (item.status == '已导入' || item.status == '校验失败') && !item.isChecking)
-           
-            // return this.templateTable.length && this.templateTable.every(item => {
-            //     if(item.isRuntimeTable) {
-            //         return item.status == '校验失败'
-            //     }else {
-            //         return item.status == '已导入'
-            //     }
-            // })
+        },
+        canAllDownload() {
+            return this.hasChecked && !this.hasRunning
+        },
+        canAllDelete() {
+            return this.templateTable.some(item => item.canDelete) && !this.hasRunning
         },
         hasUploading() {
             return this.templateTable.some(item => item.isUploading)
@@ -204,8 +219,14 @@ export default {
         hasChecking() {
             return this.templateTable.some(item => item.isChecking)
         },
-        canDelete() {
-            return this.templateTable.some(item => item.canDelete)
+        hasDeleting() {
+            return this.templateTable.some(item => item.isDeleting)
+        },
+        hasDownloading() {
+            return this.templateTable.some(item => item.isDownloading)
+        },
+        hasRunning() {
+            return this.hasChecking || this.hasDownloading || this.hasUploading || this.hasDeleting
         },
         showDialog: {
             get() {
@@ -241,6 +262,7 @@ export default {
             canChangeModel: false,
             hasSaved: false,
             deleteObject: {},
+            deleteLoading: false,
             modelList: [],
             seasonList: [],
             templateTable: [],
@@ -314,18 +336,15 @@ export default {
             this.templateTable = this.handleData(data)
 
             /**
+             * 如果有导入中，导出中，删除中，校验中的状态，需要轮询查询结果
+             * 
              * 正在导入的数据时，用户刷新页面，此时通过轮询查询导入结果
              * 导入的文件较大，时间较长，分两个阶段。
              * 阶段 1 从前端上传文件到后端，此时刷新页面，文件传输失败，只能重新导入（后续考虑做断点续传）
              * 阶段 2 后端文件接收完成后，需要读取文件数据，分析数据，此时刷新页面，可通过'导入中'状态实现 ui 返显，并提示结果
              */
             clearTimeout(this.timer)
-            if(this.hasUploading) {
-                this.timer = setTimeout(() => {
-                    this.getPlan()
-                }, 5000);
-            }
-            if(this.hasChecking) {
+            if(this.hasUploading || this.hasChecking || this.hasDownloading || this.hasDeleting) {
                 this.timer = setTimeout(() => {
                     this.getPlan()
                 }, 5000);
@@ -351,44 +370,40 @@ export default {
              */
             data.forEach((item,index)=>{
                 item.canUpload = !!item.computingCycle // 判断是否有计算周期（有则表明数据已入库，可以导入数据表）
+                item.canDelete = !!item.impTime // 有导入时间则证明有导入的文件，可以删除
                 item.canDownload = item.status == '已校验'
-                item.canDelete = item.status == '已导入' || item.status == '校验失败' || item.status == '已校验'
-                item.canCheck = item.status == '已导入' || item.status == '校验失败'
-                item.isRuntimeTable = item.tableType == '2'  // 1是基本数据表，不需要校验， 2是运行数据表，需要校验
+
                 item.isUploading = (item.status == '导入中')
+                item.isDeleting = (item.status == '删除中')
                 item.isChecking = (item.status == '校验中')
+                item.isDownloading = (item.status == '导出中')
+
+                item.isRuntimeTable = item.tableType == '2'  // 1是基本数据表，不需要校验， 2是运行数据表，需要校验
                 item.uploadVisible = (this.templateTable?.[index]?.uploadVisible || false)
             })
+            let result = {}
             // 处理轮询时，导入结束和校验结束，提示相应信息
             this.templateTable.forEach((item,index)=>{
                 if(item['status'] == '导入中'){
+                    result.msg = '导入';
                     if(data[index]['status'] == '已导入'){
-                        // 防止多个任务同时完成，提示框会重叠。包裹在 settimeout 中防止重叠
-                        setTimeout(() => {
-                            // 成功
-                            this.templateTable[index].uploadVisible = false;
-                            this.$message.success(item.tableName+'，导入成功！');
-                        }, 0);
-                    }else if(data[index]['status'] == '导入失败'){
-                        setTimeout(() => {
-                            // 失败
-                            this.$message.error(item.tableName+'，导入失败！');
-                        }, 0);
+                        this.templateTable[index].uploadVisible = false;
+                        result.status = 'success'
+                    }else{
+                        result.status = 'error'
                     }
                 }else if(item['status'] == '校验中') {
-                    if(data[index]['status'] == '已校验'){
-                        // 防止多个任务同时完成，提示框会重叠。包裹在 settimeout 中防止重叠
-                        setTimeout(() => {
-                            // 成功
-                            this.$message.success(item.tableName+'，校验完成！');
-                        }, 0);
-                    }else if(data[index]['status'] == '校验失败'){
-                        setTimeout(() => {
-                            // 失败
-                            this.$message.error(item.tableName+'，校验失败！');
-                        }, 0);
-                    }
+                    result.msg = '校验';
+                    result.status = (data[index]['status'] == '已校验') ? 'success' : 'error';
+                }else if(item['status'] == '删除中') {
+                    result.msg = '删除';
+                    result.status = (data[index]['status'] == '未导入') ? 'success' : 'error';
                 }
+                // 防止多个任务同时完成，提示框会重叠。包裹在 settimeout 中防止重叠
+                setTimeout(() => {
+                    result.status && this.$message[result.status](`${item.tableName}，${result.msg}${result.status == 'success'? '成功' : '失败'}！`);
+                }, 0);
+
             })
             return data;
         },
@@ -422,9 +437,6 @@ export default {
                 await this.getPlan()
                 this.hasSavedFn();
             }
-        },
-        testClick() {
-            
         },
         updateVisible(val) {
             this.reportVisible = val;
@@ -509,15 +521,23 @@ export default {
         
         showDeleteDialog(row){
             this.deleteObject = row || {};
+            this.deleteLoading = this.deleteObject.isDeleting;
             this.deleteVisible = true;
         },
         async deleteData() {
             let requests = null
             if(this.deleteObject.tableId){
                 requests = deleteDataApi.bind(this, this.deleteObject.tableId, this.planId)
+                this.deleteObject.isDeleting = true;
             }else{
                 requests = deleteAllDataApi.bind(this, this.planId)
+                this.templateTable.forEach(item=> {
+                    if(item.canDelete) {
+                        item.isDeleting = true;
+                    }
+                })
             }
+            this.deleteLoading = true;
             let {code, msg} = await requests()
             if(code == 200) {
                 this.$message.success(msg || `${this.deleteObject.tableName || '批量数据'}，删除成功！`)
@@ -528,6 +548,7 @@ export default {
             this.deleteObject = {}
             await this.getPlan()
             this.deleteVisible = false;
+            this.deleteLoading = false;
             this.changeSaveStatus()
         },
         async download(tableId) {
@@ -538,21 +559,36 @@ export default {
                 requests = downloadAllDataApi.bind(this, this.planId)
             }
             let {file: blobFile, filename} = await requests()
-
-            let mergeBlob = new Blob([blobFile]);
-
-            let downloadUrl = window.URL.createObjectURL(mergeBlob)
-            
-            let link = document.createElement('a')
-            link.href = downloadUrl
-            link.setAttribute('download', filename)
-            link.click();
-        }
+            if(blobFile && filename) {
+                let mergeBlob = new Blob([blobFile]);
+    
+                let downloadUrl = window.URL.createObjectURL(mergeBlob)
+                
+                let link = document.createElement('a')
+                link.href = downloadUrl
+                link.setAttribute('download', filename)
+                link.click();
+            }else {
+                this.$message.error('导出失败！')
+            }
+        },
+        runningStatus(obj) {
+            if(obj.isUploading) {
+                return '导入中'
+            } else if(obj.isChecking) {
+                return '校验中'
+            } else if(obj.isDeleting) {
+                return '删除中'
+            } else if(obj.isDownloading) {
+                return '导出中'
+            } else {
+                return ''
+            }
+        },
     },
 }
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
 .editcompute /deep/ .el-dialog__body{
     padding-top: 10px;
