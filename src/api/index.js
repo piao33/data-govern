@@ -159,30 +159,77 @@ function getErrorCountApi(planId) {
     })
 }
 
-function getAnomalieTypeApi(mid) {
-    return requests({
-        method: 'get',
-        url: `https://mock.apifox.cn/m1/3432133-0-default/anomalie`,
-        data: {mid}
-    })
-}
-
-function getAnomalieDetailApi(mid) {
+// 获取异常筛选项
+function getAnomalieTypeApi(planId, errorId) {
     return requests({
         method: 'post',
-        url: `https://mock.apifox.cn/m1/3432133-0-default/anomalieTable`,
-        data: {mid},
+        url: `/govern/getTableSelect`,
+        data: {
+            planId,
+            errorId
+        }
     })
 }
 
-function getReportOverviewApi(id) {
+// 获取异常详情
+function getAnomalieDetailApi(planId, errorId, pageSize, pageNo, tableId=0, errorType='', handleType='') {
     return requests({
         method: 'post',
-        url: `https://mock.apifox.cn/m1/3432133-0-default/report_overview`,
-        data: {id},
+        url: `/govern/errorDetails`,
+        data: {
+            planId,
+            errorId,
+            'page.pageSize': pageSize,
+            'page.pageNum': pageNo,
+            'page.currentIndex': (pageNo - 1) * pageSize,
+            tableId: tableId || 0,
+            errorType,
+            handleType,
+        },
     })
 }
 
+// 获取检验情况总览
+function getCheckOverviewApi(planId) {
+    return requests({
+        method: 'post',
+        url: `/govern/getCheckResult`,
+        data: {planId},
+    })
+}
+
+// 获取雷达图数据
+function getRadarChartApi(planId) {
+    return requests({
+        method: 'post',
+        url: `/govern/errorCountStatEcharts`,
+        data: {planId},
+    })
+}
+
+// 获取散点图数据
+function getScatterChartApi(planId) {
+    return requests({
+        method: 'post',
+        url: `/govern/tableStatEcharts`,
+        data: {planId},
+    })
+}
+
+// 获取折线图数据
+function getLineChartApi(planId, startDate, endDate, cycleType, tableId=0) {
+    return requests({
+        method: 'post',
+        url: `/govern/computingCycleStatEcharts`,
+        data: {
+            planId,
+            startDate,
+            endDate,
+            cycleType,
+            tableId,
+        },
+    })
+}
 
 
 export {
@@ -200,8 +247,10 @@ export {
     downloadAllDataApi,
     getCheckResultApi,
     getErrorCountApi,
-
     getAnomalieTypeApi,
     getAnomalieDetailApi,
-    getReportOverviewApi,
+    getCheckOverviewApi,
+    getRadarChartApi,
+    getScatterChartApi,
+    getLineChartApi,
 }

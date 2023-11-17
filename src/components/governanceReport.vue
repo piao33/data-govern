@@ -38,19 +38,19 @@
                     <div slot="content">
                         <div v-for="(item,index) in anomalieDesc" :key="index" class="tooltip-item">
                             <i class="el-icon-caret-right" style="color: #0071B7"></i>
-                            {{ item }}
+                            {{ item.desc }}
                         </div>
                     </div>
                     <el-button type="text">数据异常情况说明<i class="el-icon-warning-outline"></i></el-button>
                 </el-tooltip>
                 <div class="anomalie">
-                    <div class="anomalie-item" v-for="item in anomalieList" :key="item.id">
+                    <div class="anomalie-item" v-for="item in anomalieList" :key="item.dataId">
                         <img src="../assets/data.svg" alt="">
                         <div class="info">
                             <p>{{ item.item }}</p>
                             <span>{{ item.cnt }}项</span>
                         </div>
-                        <el-button class="detail-btn" type="text" @click="showItemDetail(item.id)">详情</el-button>
+                        <el-button class="detail-btn" type="text" @click="showItemDetail(item.dataId)">详情</el-button>
                     </div>
                 </div>
             <span slot="footer" class="dialog-footer">
@@ -58,9 +58,9 @@
             </span>
         </el-dialog>
 
-        <governance-detail :checkId="planId" :visible="detailVisible" @updateVisible="updateDetailVisible"></governance-detail>
+        <governance-detail :planId="planId" :visible="detailVisible" @updateVisible="updateDetailVisible"></governance-detail>
 
-        <governance-item-detail :checkId="planId" :visible="itemDetailVisible" @updateVisible="updateItemDetailVisible"></governance-item-detail>
+        <governance-item-detail :planId="planId" :id="errorId" :visible="itemDetailVisible" @updateVisible="updateItemDetailVisible"></governance-item-detail>
         
     </div>
 </template>
@@ -69,7 +69,7 @@
 import { getCheckResultApi, getErrorCountApi, downloadDataApi, downloadAllDataApi } from '../api/index.js'
 import governanceDetail from '/src/components/governanceDetail'
 import governanceItemDetail from '/src/components/governanceItemDetail'
-
+import { ERROR_TYPE } from '../const'
 export default {
     name: 'governanceReport',
     components: {
@@ -111,19 +111,10 @@ export default {
             loading: false,
             detailVisible: false,
             itemDetailVisible: false,
-            pl: [],
+            errorId: '',
             governReport: [],
             anomalieList: [],
-            anomalieDesc: [
-                '数据缺失：是指数据存在单点或者连续点的数据缺失情况',
-                '数据异常1：是指变电站负载功率运行数据范围异常',
-                '数据异常2：是指风电、生物质、日间光伏电厂（站）电站出力功率运行数据范围异常',
-                '数据异常3：是指夜间光伏电厂（站）出力运行数据范围异常',
-                '数据异常4：是指主变并列运行设备运行数据范围异常',
-                '数据异常5：是指主变交替运行设备运行数据范围异常',
-                '数据异常6：是指主变交替运行设备运行数据范围连续异常',
-                '数据异常7：是指运行数据出现连续恒定不变异常',
-            ]
+            anomalieDesc: ERROR_TYPE
         }
     },
     methods: {
@@ -156,9 +147,10 @@ export default {
             // 跳转详情
             this.detailVisible = true;
         },
-        showItemDetail(itemId) {
+        showItemDetail(errorId) {
             // 显示数据异常子项详情
             this.itemDetailVisible = true;
+            this.errorId = errorId
         },
         updateDetailVisible(val) {
             this.detailVisible = val;

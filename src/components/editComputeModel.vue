@@ -389,15 +389,21 @@ export default {
                     if(data[index]['status'] == '已导入'){
                         this.templateTable[index].uploadVisible = false;
                         result.status = 'success'
-                    }else{
+                    }else if(data[index]['status'] == '导入失败'){
                         result.status = 'error'
                     }
                 }else if(item['status'] == '校验中') {
                     result.msg = '校验';
-                    result.status = (data[index]['status'] == '已校验') ? 'success' : 'error';
+                    if(data[index]['status'] == '已校验'){
+                        result.status = 'success'
+                    }else if(data[index]['status'] == '校验失败'){
+                        result.status = 'error'
+                    }
                 }else if(item['status'] == '删除中') {
                     result.msg = '删除';
-                    result.status = (data[index]['status'] == '未导入') ? 'success' : 'error';
+                    if(data[index]['status'] == '未导入'){
+                        result.status = 'success'
+                    }
                 }
                 // 防止多个任务同时完成，提示框会重叠。包裹在 settimeout 中防止重叠
                 setTimeout(() => {

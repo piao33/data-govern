@@ -2,7 +2,7 @@
     <div class="content">
         <el-dialog title="" :visible.sync="showDialog" @closed="destory" :close-on-press-escape="false"
             :close-on-click-modal="false" :append-to-body="true" top="5vh" width="90%">
-            <div v-loading="loading" id="dom2image">
+            <div id="dom2image">
                 <div class="header">
                     <h2>数据治理报告</h2>
                     <span>创建时间：{{ createTime }}</span>
@@ -15,11 +15,35 @@
                 <div class="line line-total"></div>
 
                 <ul class="overview">
-                    <li class="overview-item" v-for="item in dataOverview" :key="item.id">
+                    <li class="overview-item">
                         <!-- <img :src="item.img" alt=""> -->
                         <div class="info">
-                            <p>{{ item.name }}</p>
-                            <span>{{ item.count }}</span>
+                            <p>数据表总数</p>
+                            <span>{{ dataOverview.tablesCount}}项</span>
+                        </div>
+                    </li>
+                    <li class="overview-item">
+                        <div class="info">
+                            <p>数据异常表数</p>
+                            <span>{{ dataOverview.tablesErrorCount }}项</span>
+                        </div>
+                    </li>
+                    <li class="overview-item">
+                        <div class="info">
+                            <p>数据项数</p>
+                            <span>{{ dataOverview.dataCount }}项</span>
+                        </div>
+                    </li>
+                    <li class="overview-item">
+                        <div class="info">
+                            <p>数据异常项数</p>
+                            <span>{{ dataOverview.dataErrorCount}}项</span>
+                        </div>
+                    </li>
+                    <li class="overview-item">
+                        <div class="info">
+                            <p>数据缺失项数</p>
+                            <span>{{ dataOverview.dataMissingCount }}项</span>
                         </div>
                     </li>
                 </ul>
@@ -31,7 +55,7 @@
                         <p class="sub-title">数据异常情况说明</p>
                         <div v-for="(item, index) in anomalieDesc" :key="index" class="desc-item">
                             <i class="el-icon-caret-right" style="color: #0071B7"></i>
-                            {{ item }}
+                            {{ item.desc }}
                         </div>
                     </div>
                     <div class="radar-box">
@@ -43,25 +67,28 @@
                     <p class="sub-title">异常问题按各数据表分布</p>
                     <div id="scatter"></div>
                 </div>
-                <div class="line-box">
+                <div class="line-box" v-loading="loading">
                     <p class="sub-title">各表异常问题按计算周期分布</p>
                     <div class="chart-action">
-                        <el-select size="mini" style="width: 100px" v-model="form.unit" placeholder="日，周，月">
-                            <el-option :label="item" :value="item" v-for="item in ['日','周','月']" :key="item"></el-option>
+                        <el-select size="mini" style="width: 100px" @change="changeUnit" v-model="form.unit" placeholder="日，周，月">
+                            <el-option :label="item.label" :value="item.value" v-for="item in unitOptions" :key="item.value"></el-option>
                         </el-select>
                         <el-date-picker
                             size="mini"
                             style="width: 240px;margin: 0 12px;"
                             v-model="form.period"
                             type="daterange"
+                            @change="changeDate"
                             range-separator="至"
                             start-placeholder="开始日期"
                             end-placeholder="结束日期"
+                            value-format="yyyy-MM-dd"
                             :picker-options="pickerOptions"
                         >
                         </el-date-picker>
-                        <el-select style="width: 300px" size="mini" v-model="form.tableName" placeholder="选择表">
-                            <el-option :label="item" :value="item" v-for="item in ['表1','表2','表3','表4','表5']" :key="item"></el-option>
+                        <el-select style="width: 300px" size="mini" v-model="form.tableId" placeholder="选择表">
+                            <el-option label="" value=""></el-option>
+                            <!-- <el-option :label="item" :value="item" v-for="item in ['表1','表2','表3','表4','表5']" :key="item"></el-option> -->
                         </el-select>
                     </div>
                     <div id="line"></div>
@@ -74,10 +101,11 @@
 </template>
 
 <script>
-import { getReportOverviewApi } from '../api/index.js'
+import { getCheckOverviewApi, getRadarChartApi, getScatterChartApi, getLineChartApi} from '../api/index.js'
 import domtoimage from 'dom-to-image'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
+import { ERROR_TYPE } from '../const'
 
 export default {
     name: 'governanceDetail',
@@ -86,7 +114,7 @@ export default {
             type: Boolean,
             default: false
         },
-        checkId: {
+        planId: {
             type: [Number, String],
             default: ''
         }
@@ -122,11 +150,16 @@ export default {
             lineChart: null,
             createTime: '',
             isCreating: false,
-            dataOverview: [],
+            dataOverview: {},
+            unitOptions: [
+                {label: '日', value: 'day'},
+                {label: '周', value: 'week'},
+                {label: '月', value: 'month'},
+            ],
             form: {
-                unit: '日',
-                period: '',
-                tableName: '',
+                unit: 'week',
+                period: ['2023-03-01', '2023-06-01'],
+                tableId: '',
             },
             pickerOptions: {
                 disabledDate(time) {
@@ -141,66 +174,49 @@ export default {
             做删除的有xx项，占比xx%；发现数据范围异常项数xx项，占比xx%，做填充处理的有xx项，占比xx%，
             做删除的有xx项，占比xx%；各异常类型中出现问题占比较大的是
             数据缺失，数据异常4，数据异常6，分别占比xx%，xx%，xx%。`,
-            anomalieDesc: [
-                '数据缺失：是指数据存在单点或者连续点的数据缺失情况',
-                '数据异常1：是指变电站负载功率运行数据范围异常',
-                '数据异常2：是指风电、生物质、日间光伏电厂（站）电站出力功率运行数据范围异常',
-                '数据异常3：是指夜间光伏电厂（站）出力运行数据范围异常',
-                '数据异常4：是指主变并列运行设备运行数据范围异常',
-                '数据异常5：是指主变交替运行设备运行数据范围异常',
-                '数据异常6：是指主变交替运行设备运行数据范围连续异常',
-                '数据异常7：是指运行数据出现连续恒定不变异常',
-            ],
+            anomalieDesc: ERROR_TYPE,
         }
     },
     methods: {
         async init() {
-            this.loading = true;
-            // let { overview, createTime } = await getReportOverviewApi(this.checkId);
-            let overview = [
-                {
-                    "name": "数据缺失项数",
-                    "count": 11,
-                    "img": "http://dummyimage.com/200x200/50B347/FFF&text=Mock.js"
-                },
-                {
-                    "name": "数据行数",
-                    "count": 29,
-                    "img": "http://dummyimage.com/200x200/50B347/FFF&text=Mock.js"
-                },
-                {
-                    "name": "数据行数",
-                    "count": 50,
-                    "img": "http://dummyimage.com/200x200/50B347/FFF&text=Mock.js"
-                },
-                {
-                    "name": "数据异常项数",
-                    "count": 98,
-                    "img": "http://dummyimage.com/200x200/50B347/FFF&text=Mock.js"
-                },
-                {
-                    "name": "数据表总数",
-                    "count": 28,
-                    "img": "http://dummyimage.com/200x200/50B347/FFF&text=Mock.js"
-                }
-            ];
-            let createTime = "2023-10-23 00:00:00";
-            this.dataOverview = overview;
-            this.createTime = createTime;
-            this.loading = false;
-            await this.$nextTick()
-            this.initRadar();
-            this.initScatter();
-            this.initLine();
+            this.getCheckOverview()
+            this.getRadarChart();
+            this.getScatterChart();
+            this.getLineChart();
         },
         destory() {
-            this.dataOverview = [];
+            this.dataOverview = {};
             this.createTime = '';
             this.radarChart && this.$echarts.dispose(this.radarChart)
             this.scatterChart && this.$echarts.dispose(this.scatterChart)
             this.lineChart && this.$echarts.dispose(this.lineChart)
         },
-        initRadar() {
+        changeUnit(value) {
+            this.getLineChart();
+        },
+        changeDate(value) {
+            this.getLineChart();
+        },
+        async getCheckOverview() {
+            let data = await getCheckOverviewApi(this.planId)
+
+            let createTime = "2023-10-23 00:00:00";
+            this.dataOverview = data || {};
+            this.createTime = createTime;
+        },
+        async getRadarChart() {
+            let data = await getRadarChartApi(this.planId)
+            let valueArr = data.map(item=>{
+                return item.cnt
+            })
+            let max = Math.max(...valueArr)
+            let min = Math.min(...valueArr)
+            let keyArr = data.map(item => {
+                return {name: item.item, max: max * 1.2, min: -(max - min) / 4}
+            })
+            this.initRadar(keyArr, valueArr)
+        },
+        initRadar(keyArr, valueArr) {
             var chartDom = document.getElementById('radar');
             this.radarChart = this.$echarts.init(chartDom);
             var option;
@@ -211,18 +227,7 @@ export default {
                     right: '5%',
                 },
                 radar: {
-                    indicator: [
-                        { name: '数据缺失' },
-                        { name: '数据异常1' },
-                        { name: '数据异常2' },
-                        { name: '数据异常3' },
-                        { name: '数据异常4' },
-                        { name: '数据异常5' },
-                        { name: '数据异常6' },
-                        { name: '数据异常7' },
-                        { name: '数据异常8' },
-                        { name: '数据异常9' },
-                    ].slice(0, parseInt(Math.random() * 3) + 8)
+                    indicator: keyArr
                 },
                 axisTick: {
                     show: true,
@@ -232,7 +237,6 @@ export default {
                 },
                 series: [
                     {
-                        name: 'Budget vs spending',
                         type: 'radar',
                         label: {
                             show: true,
@@ -248,7 +252,7 @@ export default {
                         },
                         data: [
                             {
-                                value: [24, 3, 20, 35, 50, 18, 23, 23, 20, 35].slice(0, parseInt(Math.random() * 3) + 8),
+                                value: valueArr,
                             }
                         ]
                     }
@@ -257,32 +261,33 @@ export default {
 
             option && this.radarChart.setOption(option);
         },
-        initScatter() {
+        async getScatterChart() {
+            let data = await getScatterChartApi(this.planId)
+            let xData = [], yData = [], valueData = [];
+            data.forEach((item, x) => {
+                xData.push(item.item);
+                item.list.forEach((listitem, y)=> {
+                    valueData.push([x, y, listitem.cnt || (Math.random()*182)])
+                    // valueData.push([x, y, 30])
+                    if(x == 0) {
+                        yData.push(listitem.item)
+                    }
+                })
+            })
+            this.initScatter(xData, yData, valueData);
+        },
+        initScatter(xData, yData, valueData) {
             var chartDom = document.getElementById('scatter');
             this.scatterChart = this.$echarts.init(chartDom);
             var option;
 
-            const xAxisData = [
-                '边配电站1', '边配电站2', '边配电站3', 
-            ].slice(0, parseInt(Math.random() * 3) + 5);
-            const yAxisData = [
-                '数据缺失', '数据异常1', '数据异常2', '数据异常3', '数据异常4', '数据异常5', '数据异常6', '数据异常7', '数据异常8', '数据异常9'
-            ].slice(0, parseInt(Math.random() * 3) + 4);
             const color = ['#b5d8ef', '#a4e3b4', '#aeece0', '#f3e6b8', '#f4cdf0', '#d9ed7a', '#bab6d3'];
-            let len = xAxisData.length * yAxisData.length;
-            const data = [
-                [0, 0, 5], [1, 0, 1], [2, 0, 7], [3, 0, 3], [4, 0, 0], [5, 0, 4], [6, 0, 4],
-                [7, 0, 4], [8, 0, 2], [9, 0, 12], [3, 1, 2], [4, 1, 2], [5, 1, 6], [6, 1, 12],
-                [0, 2, 5], [1, 2, 4], [2, 2, 4], [3, 2, 0], [4, 2, 4], [5, 2, 8], [6, 2, 3],
-                [0, 3, 7], [1, 3, 9], [2, 3, 0], [3, 3, 2], [4, 3, 5], [5, 3, 2], [6, 3, 5],
-                [0, 4, 2], [1, 4, 2],[1, 5, 2],[1, 6, 2] ,[1, 7, 2],[1, 8, 2] ,[1, 9, 2],[1, 6, 2] 
-            ].slice(0, len);
             option = {
                 tooltip: {
                     position: 'top',
                     formatter: function (params) {
                         return (
-                            `${xAxisData[params.value[0]]}： ${yAxisData[params.value[1]]} 的数量为 ${params.value[2]}`
+                            `${xData[params.value[0]]}： ${yData[params.value[1]]} 的数量为 ${params.value[2]}`
                         );
                     }
                 },
@@ -295,18 +300,24 @@ export default {
                 },
                 xAxis: {
                     type: 'category',
-                    data: xAxisData,
-                    boundaryGap: false,
+                    data: xData,
+                    boundaryGap: true,
                     splitLine: {
                         show: true
                     },
+                    axisTick:{
+                        alignWithLabel: true
+                    },
+                    // axisLabel: {
+                    //     rotate: -45,
+                    // },
                     axisLine: {
-                        show: false
+                        show: true
                     }
                 },
                 yAxis: {
                     type: 'category',
-                    data: yAxisData,
+                    data: yData,
                     axisLine: {
                         show: false
                     }
@@ -315,14 +326,19 @@ export default {
                     {
                         type: 'scatter',
                         symbolSize: function (val) {
-                            return val[2] * 3;
+                            if(val[2] < 5){
+                                return 5
+                            }else if(val[2] > 25) {
+                                return 25 + (val[2]-20) * 0.1
+                            }
+                            return val[2];
                         },
                         itemStyle: {
                             color: ({ data }) => {
                                 return color[data[0]]
                             }
                         },
-                        data,
+                        data: valueData,
                         animationDelay: function (idx) {
                             return idx * 5;
                         }
@@ -332,7 +348,32 @@ export default {
 
             option && this.scatterChart.setOption(option);
         },
-        initLine() {
+        async getLineChart() {
+            this.loading = true;
+            let data = await getLineChartApi(this.planId, ...this.form.period, this.form.unit, 0)
+            let legend = [], xData = [], valueData = [], selectedLegend={};
+            data.forEach(item => {
+                xData.push(item.item)
+                item.list.forEach((listitem, index)=> {
+                    let obj = valueData[index] || {
+                        name: listitem.item,
+                        type: 'line',
+                        stack: 'Total',
+                        data: []
+                    }
+                    obj.data.push(listitem.cnt)
+                    valueData[index] = obj;
+                })
+            })
+            legend = valueData.map(item=> item.name)
+            valueData.forEach(item=>{
+                let hasData = item.data.some(dataitem=> dataitem != 0)
+                selectedLegend[item.name] = hasData 
+            })
+            this.initLine(xData,legend,valueData, selectedLegend)
+            this.loading = false;
+        },
+        initLine(xData,legend,valueData, selectedLegend) {
             var chartDom = document.getElementById('line');
             this.lineChart = this.$echarts.init(chartDom);
             var option;
@@ -342,12 +383,10 @@ export default {
                     trigger: 'axis'
                 },
                 legend: {
-                    // left: 30,
-                    // orient: 'vertical',
-                    // top: 30,
                     bottom: 0,
-                    itemGap: 30,
-                    data: ['数据缺失', '数据异常1', '数据异常2', '数据异常3', '数据异常4']
+                    itemGap: 10,
+                    data: legend,
+                    selected: selectedLegend
                 },
                 grid: {
                     top: 14,
@@ -359,7 +398,7 @@ export default {
                 xAxis: {
                     type: 'category',
                     boundaryGap: false,
-                    data: ['1月', '2月', '3月', '4月', '5月', '6月']
+                    data: xData
                 },
                 yAxis: {
                     type: 'value',
@@ -370,38 +409,7 @@ export default {
                         show: false
                     },
                 },
-                series: [
-                    {
-                        name: '数据缺失',
-                        type: 'line',
-                        stack: 'Total',
-                        data: [120, 132, 101, 134, 90, 230, 210]
-                    },
-                    {
-                        name: '数据异常1',
-                        type: 'line',
-                        stack: 'Total',
-                        data: [220, 182, 191, 234, 290, 330, 310]
-                    },
-                    {
-                        name: '数据异常2',
-                        type: 'line',
-                        stack: 'Total',
-                        data: [150, 232, 201, 154, 190, 330, 410]
-                    },
-                    {
-                        name: '数据异常3',
-                        type: 'line',
-                        stack: 'Total',
-                        data: [320, 332, 301, 334, 390, 330, 320]
-                    },
-                    {
-                        name: '数据异常4',
-                        type: 'line',
-                        stack: 'Total',
-                        data: [820, 932, 901, 934, 1290, 1330, 1320]
-                    }
-                ]
+                series: valueData
             };
 
             option && this.lineChart.setOption(option);
@@ -559,7 +567,10 @@ div /deep/ .el-dialog__body {
 
 #radar {
     width: 100%;
-    height: 400px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .desc-box {
@@ -577,7 +588,7 @@ div /deep/ .el-dialog__body {
 }
 
 .desc-item {
-    margin: 18px 0;
+    margin: 14px 0;
     font-size: 16px;
     color: #848585;
     display: flex;
@@ -599,7 +610,7 @@ div /deep/ .el-dialog__body {
 
 #scatter {
     width: 100%;
-    height: 400px;
+    height: 500px;
 }
 
 .sub-title {
