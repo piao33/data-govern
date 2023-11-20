@@ -267,8 +267,8 @@ export default {
             data.forEach((item, x) => {
                 xData.push(item.item);
                 item.list.forEach((listitem, y)=> {
-                    valueData.push([x, y, listitem.cnt || (Math.random()*182)])
-                    // valueData.push([x, y, 30])
+                    valueData.push([x, y, listitem.cnt])
+                    // valueData.push([x, y, listitem.cnt || (Math.random()*182)])
                     if(x == 0) {
                         yData.push(listitem.item)
                     }
@@ -359,6 +359,7 @@ export default {
                         name: listitem.item,
                         type: 'line',
                         stack: 'Total',
+                        showSymbol: false,
                         data: []
                     }
                     obj.data.push(listitem.cnt)
@@ -388,11 +389,17 @@ export default {
                     data: legend,
                     selected: selectedLegend
                 },
+                dataZoom: [{
+                    filterMode: 'none',
+                    left: 100,
+                    right: 100,
+                    bottom: 50,
+                }],
                 grid: {
                     top: 14,
                     left: 20,
                     right: 20,
-                    bottom: 40,
+                    bottom: 100,
                     containLabel: true
                 },
                 xAxis: {

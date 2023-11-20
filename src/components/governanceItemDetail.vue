@@ -70,8 +70,13 @@
                 </el-table-column>
             </el-table>
 
-            <el-pagination class="pagination" @current-change="handleCurrentChange"
-                :current-page="currentPage" :page-sizes="[10]" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper"
+            <el-pagination class="pagination" 
+                @current-change="handleCurrentChange"
+                @size-change="handleSizeChange"
+                :current-page="currentPage" 
+                :page-size="pageSize" 
+                :page-sizes="[10, 20, 50, 100]"
+                layout="total, sizes, prev, pager, next, jumper"
                 :total="total">
             </el-pagination>
         </el-dialog>
@@ -169,6 +174,11 @@ export default {
         },
         handleCurrentChange(val) {
             this.currentPage = val;
+            this.getGovernanceDetail()
+        },
+        handleSizeChange(val) {
+            this.pageSize = val;
+            this.getGovernanceDetail()
         },
         reset() {
             this.$refs['filterForm'].resetFields()

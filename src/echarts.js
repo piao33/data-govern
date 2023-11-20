@@ -12,6 +12,7 @@ import {
     MarkAreaComponent,
     MarkLineComponent,
     MarkPointComponent,
+    DataZoomSliderComponent,
 } from 'echarts/components'
 import { LabelLayout, UniversalTransition } from 'echarts/features'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -37,6 +38,7 @@ echarts.use([
     LabelLayout,
     UniversalTransition,
     CanvasRenderer,
+    DataZoomSliderComponent
 ])
 
 export default echarts;

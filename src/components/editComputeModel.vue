@@ -356,7 +356,6 @@ export default {
             this.form.year = year;
             this.form.season = season;
         },
-        
         handleData(data) {
             /**
              * 后端设置的状态 status 参考
@@ -381,37 +380,36 @@ export default {
                 item.isRuntimeTable = item.tableType == '2'  // 1是基本数据表，不需要校验， 2是运行数据表，需要校验
                 item.uploadVisible = (this.templateTable?.[index]?.uploadVisible || false)
             })
-            let result = {}
             // 处理轮询时，导入结束和校验结束，提示相应信息
             this.templateTable.forEach((item,index)=>{
                 if(item['status'] == '导入中'){
-                    result.msg = '导入';
                     if(data[index]['status'] == '已导入'){
                         this.templateTable[index].uploadVisible = false;
-                        result.status = 'success'
+                        this.delayMessage('success', `${item.tableName}，导入成功！`)
                     }else if(data[index]['status'] == '导入失败'){
-                        result.status = 'error'
+                        this.delayMessage('error', `${item.tableName}，导入失败！`)
                     }
                 }else if(item['status'] == '校验中') {
-                    result.msg = '校验';
                     if(data[index]['status'] == '已校验'){
-                        result.status = 'success'
+                        this.delayMessage('success', `${item.tableName}，校验成功！`)
                     }else if(data[index]['status'] == '校验失败'){
-                        result.status = 'error'
+                        this.delayMessage('error', `${item.tableName}，校验失败！`)
                     }
                 }else if(item['status'] == '删除中') {
-                    result.msg = '删除';
                     if(data[index]['status'] == '未导入'){
-                        result.status = 'success'
+                        this.delayMessage('success', `${item.tableName}，删除成功！`)
+                    }else if(data[index]['status'] != '删除中') {
+                        this.delayMessage('error', `${item.tableName}，删除失败！`)
                     }
                 }
-                // 防止多个任务同时完成，提示框会重叠。包裹在 settimeout 中防止重叠
-                setTimeout(() => {
-                    result.status && this.$message[result.status](`${item.tableName}，${result.msg}${result.status == 'success'? '成功' : '失败'}！`);
-                }, 0);
-
             })
             return data;
+        },
+        // 防止多个任务同时完成，提示框会重叠。包裹在 settimeout 中防止重叠
+        delayMessage(type, msg) {
+            setTimeout(() => {
+                this.$message[type](msg);
+            }, 0);
         },
         handlePeriod(str){
             /**
@@ -509,13 +507,9 @@ export default {
             if(resArr.length) {
                 resArr.forEach(item=>{
                     if(item.code == 200) {
-                        setTimeout(() => {
-                            this.$message.success( item.msg || '校验完成！')
-                        }, 0);
+                        this.delayMessage('success', item.msg || '校验完成！')
                     }else {
-                        setTimeout(() => {
-                            this.$message.error(item.msg || '校验失败！')
-                        }, 0);
+                        this.delayMessage('error', item.msg || '校验失败！')
                     }
                 })
             }else {
