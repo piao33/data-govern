@@ -12,7 +12,7 @@
                         <el-col :span="6">
                             <el-form-item label="数据表:" label-width="60px" prop="tableId">
                                 <el-select style="width: 100%" v-model="filterForm.tableId">
-                                    <el-option :label="item.tableName" :value="item.tableId" v-for="item in anomalieTableSelect" :key="item.tableId"></el-option>
+                                    <el-option :label="item.tableName" :value="item.tableId" v-for="item in tableSelect" :key="item.tableId"></el-option>
                                 </el-select>
                             </el-form-item>
                         </el-col>
@@ -84,7 +84,7 @@
 </template>
 
 <script>
-import { getAnomalieTypeApi, getAnomalieDetailApi } from '../api/index.js'
+import { getRuntimeTableApi, getAnomalieDetailApi } from '../api/index.js'
 import { ERROR_TYPE } from '../const'
 
 export default {
@@ -135,7 +135,7 @@ export default {
                 type: '',
                 status: '',
             },
-            anomalieTableSelect: [],
+            tableSelect: [],
             anomalieDetailList: [],
             currentPage: 1,
             pageSize: 10,
@@ -145,7 +145,7 @@ export default {
     methods: {
         async init() {
             this.getGovernanceDetail()
-            this.getAnomalieType()
+            this.getTableList()
         },
         destory() {
             this.anomalieDetailList = [];
@@ -157,9 +157,9 @@ export default {
         handleClick(i, row) {
             console.log(i, row)
         },
-        async getAnomalieType() {
-            let arr = await getAnomalieTypeApi(this.planId, this.id);
-            this.anomalieTableSelect = arr || []
+        async getTableList() {
+            let arr = await getRuntimeTableApi(this.planId);
+            this.tableSelect = arr || []
         },
         async getGovernanceDetail() {
             this.loading = true;
@@ -182,6 +182,8 @@ export default {
         },
         reset() {
             this.$refs['filterForm'].resetFields()
+            this.pageSize = 10;
+            this.currentPage = 1;
             this.getGovernanceDetail()
         }
     }

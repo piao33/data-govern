@@ -5,7 +5,7 @@
             <div id="dom2image">
                 <div class="header">
                     <h2>数据治理报告</h2>
-                    <span>创建时间：{{ createTime }}</span>
+                    <span>创建时间：{{ dataOverview.checkTime }}</span>
                     <el-button type="text" style="padding:0;marginLeft:12px;" v-if="!isCreating" @click="createReportImage">报告下载</el-button>
                     <el-button type="text" @click="showDialog = false" v-if="!isCreating" style="padding:0;float: left;">
                         返回
@@ -16,31 +16,39 @@
 
                 <ul class="overview">
                     <li class="overview-item">
-                        <!-- <img :src="item.img" alt=""> -->
+                        <img src="../assets/data_g.svg" alt="">
                         <div class="info">
                             <p>数据表总数</p>
                             <span>{{ dataOverview.tablesCount}}项</span>
                         </div>
                     </li>
                     <li class="overview-item">
+                        <img src="../assets/data_g.svg" alt="">
+
                         <div class="info">
                             <p>数据异常表数</p>
                             <span>{{ dataOverview.tablesErrorCount }}项</span>
                         </div>
                     </li>
                     <li class="overview-item">
+                        <img src="../assets/data_g.svg" alt="">
+
                         <div class="info">
                             <p>数据项数</p>
                             <span>{{ dataOverview.dataCount }}项</span>
                         </div>
                     </li>
                     <li class="overview-item">
+                        <img src="../assets/data_g.svg" alt="">
+
                         <div class="info">
                             <p>数据异常项数</p>
                             <span>{{ dataOverview.dataErrorCount}}项</span>
                         </div>
                     </li>
                     <li class="overview-item">
+                        <img src="../assets/data_g.svg" alt="">
+
                         <div class="info">
                             <p>数据缺失项数</p>
                             <span>{{ dataOverview.dataMissingCount }}项</span>
@@ -86,22 +94,22 @@
                             :picker-options="pickerOptions"
                         >
                         </el-date-picker>
-                        <el-select style="width: 300px" size="mini" v-model="form.tableId" placeholder="选择表">
-                            <el-option label="" value=""></el-option>
-                            <!-- <el-option :label="item" :value="item" v-for="item in ['表1','表2','表3','表4','表5']" :key="item"></el-option> -->
+                        <el-select style="width: 300px" size="mini" v-model="form.tableId" @change="changeTable" placeholder="选择表">
+                            <el-option label="全部" value=""></el-option>
+                            <el-option :label="item.tableName" :value="item.tableId" v-for="item in tableSelect" :key="item.tableId"></el-option>
                         </el-select>
                     </div>
                     <div id="line"></div>
                 </div>
                 <div class="line line-result"></div>
-                <div class="result">{{ result }}</div>
+                <div class="result">{{ dataOverview.checkConclusion }}</div>
             </div>
         </el-dialog>
     </div>
 </template>
 
 <script>
-import { getCheckOverviewApi, getRadarChartApi, getScatterChartApi, getLineChartApi} from '../api/index.js'
+import { getCheckOverviewApi, getRuntimeTableApi, getRadarChartApi, getScatterChartApi, getLineChartApi} from '../api/index.js'
 import domtoimage from 'dom-to-image'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -127,7 +135,7 @@ export default {
             set(val) {
                 this.$emit('updateVisible', val)
             }
-        }
+        },
     },
     beforeDestroy() {
 
@@ -158,30 +166,27 @@ export default {
             ],
             form: {
                 unit: 'week',
-                period: ['2023-03-01', '2023-06-01'],
+                period: [],
                 tableId: '',
             },
+            tableSelect: [],
             pickerOptions: {
-                disabledDate(time) {
-                    return time.getTime() > Date.now();
+                disabledDate:(time)=> {
+                    console.log(time, time.getTime())
+                    console.log(new Date(this.dataOverview.startDate), new Date(this.dataOverview.startDate).getTime())
+                    return time.getTime() > new Date(this.dataOverview.endDate).getTime() 
+                           || time.getTime() < new Date(this.dataOverview.startDate).getTime()- 8 * 3600 * 1000
                 },
             },
-            result: `本次数据校验治理任务共校验治理7张表xxxxx条数据，
-            获得有效使用计算周期160天（原始计算周期180天）数据xxxx条，占比90%。
-            其中，出现数据缺失的表有7张，出现数据范围异常的表有5张；
-            校验缺失数据xx条，缺失占比xx%；校验异常范围数据xxx条，异常占比xx%。
-            发现数据缺失项数xx项，占比xx%，做填充处理的有xx项，占比xx%，
-            做删除的有xx项，占比xx%；发现数据范围异常项数xx项，占比xx%，做填充处理的有xx项，占比xx%，
-            做删除的有xx项，占比xx%；各异常类型中出现问题占比较大的是
-            数据缺失，数据异常4，数据异常6，分别占比xx%，xx%，xx%。`,
             anomalieDesc: ERROR_TYPE,
         }
     },
     methods: {
         async init() {
-            this.getCheckOverview()
+            this.getTableList();
             this.getRadarChart();
             this.getScatterChart();
+            await this.getCheckOverview();
             this.getLineChart();
         },
         destory() {
@@ -197,15 +202,21 @@ export default {
         changeDate(value) {
             this.getLineChart();
         },
+        changeTable(value) {
+            this.getLineChart();
+        },
         async getCheckOverview() {
             let data = await getCheckOverviewApi(this.planId)
-
-            let createTime = "2023-10-23 00:00:00";
             this.dataOverview = data || {};
-            this.createTime = createTime;
+            this.form.period = [data.startDate || '', data.endDate || '']
+        },
+        async getTableList() {
+            let arr = await getRuntimeTableApi(this.planId);
+            this.tableSelect = arr || []
         },
         async getRadarChart() {
             let data = await getRadarChartApi(this.planId)
+            data = data?.length ? data : []
             let valueArr = data.map(item=>{
                 return item.cnt
             })
@@ -227,7 +238,7 @@ export default {
                     right: '5%',
                 },
                 radar: {
-                    indicator: keyArr
+                    indicator: keyArr,
                 },
                 axisTick: {
                     show: true,
@@ -264,7 +275,8 @@ export default {
         async getScatterChart() {
             let data = await getScatterChartApi(this.planId)
             let xData = [], yData = [], valueData = [];
-            data.forEach((item, x) => {
+
+            (data?.length ? data : []).forEach((item, x) => {
                 xData.push(item.item);
                 item.list.forEach((listitem, y)=> {
                     valueData.push([x, y, listitem.cnt])
@@ -350,9 +362,10 @@ export default {
         },
         async getLineChart() {
             this.loading = true;
-            let data = await getLineChartApi(this.planId, ...this.form.period, this.form.unit, 0)
+            let data = await getLineChartApi(this.planId, ...this.form.period, this.form.unit, this.form.tableId || 0)
+            this.loading = false;
             let legend = [], xData = [], valueData = [], selectedLegend={};
-            data.forEach(item => {
+            (data?.length ? data : []).forEach(item => {
                 xData.push(item.item)
                 item.list.forEach((listitem, index)=> {
                     let obj = valueData[index] || {
@@ -372,7 +385,6 @@ export default {
                 selectedLegend[item.name] = hasData 
             })
             this.initLine(xData,legend,valueData, selectedLegend)
-            this.loading = false;
         },
         initLine(xData,legend,valueData, selectedLegend) {
             var chartDom = document.getElementById('line');
@@ -398,7 +410,7 @@ export default {
                 grid: {
                     top: 14,
                     left: 20,
-                    right: 20,
+                    right: 40,
                     bottom: 100,
                     containLabel: true
                 },
@@ -552,9 +564,9 @@ div /deep/ .el-dialog__body {
 }
 
 .overview-item img {
-    width: 64px;
+    width: 56px;
     vertical-align: top;
-    margin: 0 20px;
+    margin: 0 20px 0 0;
 }
 
 .overview-item .info p {

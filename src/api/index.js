@@ -159,14 +159,13 @@ function getErrorCountApi(planId) {
     })
 }
 
-// 获取异常筛选项
-function getAnomalieTypeApi(planId, errorId) {
+// 获取方案下的运行表
+function getRuntimeTableApi(planId) {
     return requests({
         method: 'post',
         url: `/govern/getTableSelect`,
         data: {
             planId,
-            errorId
         }
     })
 }
@@ -217,7 +216,7 @@ function getScatterChartApi(planId) {
 }
 
 // 获取折线图数据
-function getLineChartApi(planId, startDate, endDate, cycleType, tableId=0) {
+function getLineChartApi(planId, startDate, endDate, cycleType, tableId) {
     return requests({
         method: 'post',
         url: `/govern/computingCycleStatEcharts`,
@@ -247,7 +246,7 @@ export {
     downloadAllDataApi,
     getCheckResultApi,
     getErrorCountApi,
-    getAnomalieTypeApi,
+    getRuntimeTableApi,
     getAnomalieDetailApi,
     getCheckOverviewApi,
     getRadarChartApi,
