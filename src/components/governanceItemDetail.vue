@@ -19,8 +19,8 @@
                         <el-col :span="6">
                             <el-form-item label="异常类型:" label-width="90px" prop="type">
                                 <el-select style="width: 100%" v-model="filterForm.type">
-                                    <el-option label="单点数据缺失" value="1" key="1"></el-option>
-                                    <el-option label="连续数据缺失" value="2" key="2"></el-option>
+                                    <el-option label="单点数据异常" value="1" key="1"></el-option>
+                                    <el-option label="连续数据异常" value="2" key="2"></el-option>
                                 </el-select>
                             </el-form-item>
                         </el-col>
@@ -43,7 +43,7 @@
             </div>
 
             <el-table :data="anomalieDetailList" border v-loading="loading">
-                <el-table-column label="序号" width="50" align="center">
+                <el-table-column label="序号" width="80" align="center">
                     <template slot-scope="scope">
                         <span>{{ scope.$index+1 + (currentPage-1) * pageSize }}</span>
                     </template>
@@ -65,7 +65,8 @@
                 <el-table-column property="testDate" label="检测时间" align="center"></el-table-column>
                 <el-table-column label="处理状态" align="center" width="80">
                     <template slot-scope="scope">
-                        <span style="color: #0071B7;">{{ scope.row.handleType == '2' ? '删除' : '填充' }}</span>
+                        <span v-if="scope.row.handleType == '2'" style="color: #f34242;">已删除</span>
+                        <span v-else-if="scope.row.handleType == '1'" style="color: #0071B7;">已填充</span>
                     </template>
                 </el-table-column>
             </el-table>
