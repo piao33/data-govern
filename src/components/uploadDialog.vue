@@ -173,6 +173,7 @@ export default {
             }else if(file.status == 'fail') {
                 this.clearUpload();
             }else { // status == ready
+                this.uploadBySelf = true;
                 this.filePath = file.name
                 this.uploadPercent = 0;
                 this.currentStep = 2;

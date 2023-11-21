@@ -401,7 +401,7 @@ export default {
             this.templateTable.forEach((item,index)=>{
                 if(item['status'] == '导入中'){
                     if(data[index]['status'] == '已导入'){
-                        this.templateTable[index].uploadVisible = false;
+                        data[index].uploadVisible = false;
                         this.delayMessage('success', `${item.tableName}，导入成功！`)
                     }else if(data[index]['status'] == '导入失败'){
                         this.delayMessage('error', `${item.tableName}，导入失败！`)
