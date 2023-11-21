@@ -558,6 +558,7 @@ export default {
             }else{
                 requests = downloadAllDataApi.bind(this, this.planId)
             }
+            this.$message.success('下载操作已提交')
             let {file: blobFile, filename} = await requests()
             if(blobFile && filename) {
                 let mergeBlob = new Blob([blobFile]);

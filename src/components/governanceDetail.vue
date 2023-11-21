@@ -172,8 +172,6 @@ export default {
             tableSelect: [],
             pickerOptions: {
                 disabledDate:(time)=> {
-                    console.log(time, time.getTime())
-                    console.log(new Date(this.dataOverview.startDate), new Date(this.dataOverview.startDate).getTime())
                     return time.getTime() > new Date(this.dataOverview.endDate).getTime() 
                            || time.getTime() < new Date(this.dataOverview.startDate).getTime()- 8 * 3600 * 1000
                 },
@@ -280,7 +278,6 @@ export default {
                 xData.push(item.item);
                 item.list.forEach((listitem, y)=> {
                     valueData.push([x, y, listitem.cnt])
-                    // valueData.push([x, y, listitem.cnt || (Math.random()*182)])
                     if(x == 0) {
                         yData.push(listitem.item)
                     }
@@ -291,6 +288,14 @@ export default {
         initScatter(xData, yData, valueData) {
             var chartDom = document.getElementById('scatter');
             this.scatterChart = this.$echarts.init(chartDom);
+
+            let valueArr = valueData.map(x=> x[2])
+            // 40是展示效果较好的散点最大值, 5则是最小值
+            let maxScatter = 40, minScatter = 5;
+            let max = Math.max(...valueArr)
+            let min = Math.min(...valueArr)
+            let scale = (max - min) / (maxScatter - minScatter); 
+
             var option;
 
             const color = ['#b5d8ef', '#a4e3b4', '#aeece0', '#f3e6b8', '#f4cdf0', '#d9ed7a', '#bab6d3'];
@@ -338,12 +343,10 @@ export default {
                     {
                         type: 'scatter',
                         symbolSize: function (val) {
-                            if(val[2] < 5){
-                                return 5
-                            }else if(val[2] > 25) {
-                                return 25 + (val[2]-20) * 0.1
+                            if(val[2] == 0){
+                                return 0
                             }
-                            return val[2];
+                            return val[2] / scale + minScatter;
                         },
                         itemStyle: {
                             color: ({ data }) => {
@@ -590,6 +593,15 @@ div /deep/ .el-dialog__body {
     display: flex;
     align-items: center;
     justify-content: center;
+
+    /* width: 90%;
+    height: 90%;
+    transform: translate(-50%,-50%);
+    position: absolute;
+    margin-top: 32px;
+    left: 50%;
+    top: 50%; */
+
 }
 
 .desc-box {
@@ -621,6 +633,7 @@ div /deep/ .el-dialog__body {
 .radar-box {
     width: 40%;
     padding-left: 32px;
+    position: relative;
 }
 
 .scatter-box {
