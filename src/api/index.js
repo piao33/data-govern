@@ -230,6 +230,17 @@ function getLineChartApi(planId, startDate, endDate, cycleType, tableId) {
     })
 }
 
+// 评估
+function assessApi(planId) {
+    return requests({
+        method: 'post',
+        url: `/govern/saveResultData`,
+        data: {
+            planId,
+        },
+    })
+}
+
 
 export {
     getCalcModelApi,
@@ -252,4 +263,5 @@ export {
     getRadarChartApi,
     getScatterChartApi,
     getLineChartApi,
+    assessApi
 }

@@ -58,7 +58,7 @@
             </el-form>
             <div class="formbtn-box">
                 <el-button class="large-btn-120 right20" :disabled="disableSave" type="primary" @click="showSaveDialog">保存</el-button>
-                <el-button class="large-btn-120 right20" :disabled="hasChecking" type="primary" @click="close">评估</el-button>
+                <el-button class="large-btn-120 right20" :disabled="!hasAllChecked" type="primary" @click="showAssessDialog">评估</el-button>
             </div>
             <div class="line"></div>
             <div class="tablebtn-box">
@@ -89,7 +89,7 @@
                     <template slot-scope="scope">
                         <el-button :disabled="!scope.row.canUpload || scope.row.isDeleting || hasCheckStatus" @click="showUploadDialog(scope.$index)" type="text">导入</el-button>
                         <el-button v-if="scope.row.isRuntimeTable" :disabled="!hasAllUpload || hasDeleting || hasDownloading || scope.row.canDownload || scope.row.isChecking" type="text" @click="checkData(scope.row)">校验</el-button>
-                        <el-button v-if="scope.row.isRuntimeTable" :disabled="!scope.row.canDownload || hasRunning" @click="download(scope.row.tableId)" type="text">导出</el-button>
+                        <el-button v-if="scope.row.isRuntimeTable" :disabled="!scope.row.canDownload || hasRunning" @click="download(scope.row)" type="text">导出</el-button>
                         <el-button :disabled="!scope.row.canDelete || hasRunning" type="text" @click="showDeleteDialog(scope.row)">删除</el-button>
                     </template>
                 </el-table-column>
@@ -131,6 +131,17 @@
             </span>
         </el-dialog>
 
+        <el-dialog title="提 示" :append-to-body="true" :visible.sync="assessVisible" width="500px" center>
+            <h2 style="text-align: center">是否确认使用该治理数据进行评估计算？</h2>
+            <span slot="footer" class="dialog-footer">
+                <el-button type="primary" :disabled="assessLoading" @click="assess">
+                    <i v-if="assessLoading" class="el-icon-loading"></i>
+                    {{ assessLoading ? '评估中...' : '确 认' }}
+                </el-button>
+                <el-button @click="assessVisible = false">取 消</el-button>
+            </span>
+        </el-dialog>
+
         <el-dialog title="数据治理校验中" center :append-to-body="true" :visible.sync="checkingVisible" width="500px">
             <div class="progress-box">
                 <el-progress :text-inside="true" text-color="#fff" :stroke-width="26" :percentage="70"></el-progress>
@@ -144,7 +155,7 @@
 import governanceReport from  './governanceReport.vue'
 import uploadDialog from './uploadDialog.vue'
 import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi, checkDataApi, checkAllDataApi,
-     deleteDataApi, deleteAllDataApi, downloadDataApi, downloadAllDataApi} from '../api/index.js'
+     deleteDataApi, deleteAllDataApi, downloadDataApi, downloadAllDataApi, assessApi} from '../api/index.js'
 export default {
     name: 'editComputeModel',
     components: {
@@ -194,6 +205,10 @@ export default {
         hasAllUpload() {
             let importList = ['未导入', '导入失败']
             return this.templateTable.length && this.templateTable.every(item => !importList.includes(item.status) && !item.isUploading)
+        },
+        hasAllChecked() {
+            let runTimeTable = this.templateTable.filter(item => item.isRuntimeTable)
+            return !!(runTimeTable.length && runTimeTable.every(item => item.status == '已校验'))
         },
         canAllCheck() {
             // 陷阱：every 函数在数组为空时总是返回true。
@@ -258,11 +273,13 @@ export default {
             loading_table: false,
             reportVisible: false,
             deleteVisible: false,
+            assessVisible: false,
             changeModelVisible: false,
             canChangeModel: false,
             hasSaved: false,
             deleteObject: {},
             deleteLoading: false,
+            assessLoading: false,
             modelList: [],
             seasonList: [],
             templateTable: [],
@@ -551,15 +568,30 @@ export default {
             this.deleteLoading = false;
             this.changeSaveStatus()
         },
-        async download(tableId) {
+        async download(row) {
             let requests = null
-            if(tableId){
-                requests = downloadDataApi.bind(this, tableId, this.planId)
+            if(row?.tableId){
+                row.isDownloading = true;
+                requests = downloadDataApi.bind(this, row.tableId, this.planId)
             }else{
+                this.templateTable.forEach(item => {
+                    if(item.isRuntimeTable && item.status == '已校验') {
+                        item.isDownloading = true;
+                    }
+                })
                 requests = downloadAllDataApi.bind(this, this.planId)
             }
             this.$message.success('下载操作已提交')
             let {file: blobFile, filename} = await requests()
+            if(row?.tableId) {
+                row.isDownloading = false;
+            }else{
+                this.templateTable.forEach(item => {
+                    if(item.isRuntimeTable && item.status == '已校验') {
+                        item.isDownloading = false;
+                    }
+                })
+            }
             if(blobFile && filename) {
                 let mergeBlob = new Blob([blobFile]);
     
@@ -586,6 +618,20 @@ export default {
                 return ''
             }
         },
+        showAssessDialog() {
+            this.assessVisible = true;
+        },
+        async assess() {
+            this.assessLoading = true;
+            let {code, msg} = await assessApi(this.planId)
+            this.assessVisible = false;
+            this.assessLoading = false;
+            if(code == 200) {
+                this.$message.success('操作成功！')
+            }else {
+                this.$message.error(msg || '操作成功！')
+            }
+        }
     },
 }
 </script>

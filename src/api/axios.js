@@ -4,7 +4,7 @@ import qs from 'qs';
 // 默认配置
 const instance = axios.create({
     // baseURL: 'https://mock.apifox.cn/m1/3432133-0-default',
-    timeout: 10000,
+    timeout: 20000,
     headers: {"Content-type": 'application/x-www-form-urlencoded',},
 });
 
