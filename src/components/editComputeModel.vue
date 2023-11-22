@@ -441,7 +441,6 @@ export default {
             let year = str.slice(0,4)
             let reg = new RegExp(/\d{4}-/,'gi');
             let season = str.replace(reg, '').replace('至', ';');
-            console.log(year,season)
             return [new Date(year), season]
         },
         showSaveDialog() {
