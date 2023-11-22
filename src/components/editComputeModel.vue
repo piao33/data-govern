@@ -113,7 +113,7 @@
         <governance-report :planId="planId" :visible="reportVisible" @updateVisible="updateVisible"></governance-report>
 
         <el-dialog title="提 示" :append-to-body="true" :visible.sync="deleteVisible" width="500px" center>
-            <h2 style="text-align: center">是否确认删除{{deleteObject.tableName || '所有记录'}}？删除后需重新校验！</h2>
+            <h2 style="text-align: center">是否确认删除{{deleteObject.tableName || '所有记录'}}？<br/>删除后需重新校验！</h2>
             <span slot="footer" class="dialog-footer">
                 <el-button type="primary" :disabled="deleteLoading" @click="deleteData">
                     <i v-if="deleteLoading" class="el-icon-loading"></i>
@@ -439,8 +439,9 @@ export default {
              * 12-01;02-28
              */
             let year = str.slice(0,4)
-            let reg = new RegExp(''+year+'-','gi');
+            let reg = new RegExp(/\d{4}-/,'gi');
             let season = str.replace(reg, '').replace('至', ';');
+            console.log(year,season)
             return [new Date(year), season]
         },
         showSaveDialog() {

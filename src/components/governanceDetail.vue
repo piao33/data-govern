@@ -6,7 +6,7 @@
                 <div class="header">
                     <h2>数据治理报告</h2>
                     <span>创建时间：{{ dataOverview.checkTime }}</span>
-                    <el-button type="text" style="padding:0;marginLeft:12px;" v-if="!isCreating" @click="createReportImage">报告下载</el-button>
+                    <el-button type="text" style="padding:0;marginLeft:12px;" v-show="!isCreating || !loading" @click="createReportImage">报告下载</el-button>
                     <el-button type="text" @click="showDialog = false" v-if="!isCreating" style="padding:0;float: left;">
                         返回
                         <i class="el-icon-d-arrow-left" style="color: #0071B7;fontWeight: bolder;"></i>
@@ -16,14 +16,14 @@
 
                 <ul class="overview">
                     <li class="overview-item">
-                        <img src="../assets/data_g.svg" alt="">
+                        <img :src="base64Icon" alt="">
                         <div class="info">
                             <p>数据表总数</p>
                             <span>{{ dataOverview.tablesCount}}项</span>
                         </div>
                     </li>
                     <li class="overview-item">
-                        <img src="../assets/data_g.svg" alt="">
+                        <img :src="base64Icon" alt="">
 
                         <div class="info">
                             <p>数据异常表数</p>
@@ -31,7 +31,7 @@
                         </div>
                     </li>
                     <li class="overview-item">
-                        <img src="../assets/data_g.svg" alt="">
+                        <img :src="base64Icon" alt="">
 
                         <div class="info">
                             <p>数据项数</p>
@@ -39,7 +39,7 @@
                         </div>
                     </li>
                     <li class="overview-item">
-                        <img src="../assets/data_g.svg" alt="">
+                        <img :src="base64Icon" alt="">
 
                         <div class="info">
                             <p>数据异常项数</p>
@@ -47,7 +47,7 @@
                         </div>
                     </li>
                     <li class="overview-item">
-                        <img src="../assets/data_g.svg" alt="">
+                        <img :src="base64Icon" alt="">
 
                         <div class="info">
                             <p>数据缺失项数</p>
@@ -159,6 +159,7 @@ export default {
             createTime: '',
             isCreating: false,
             dataOverview: {},
+            base64Icon: 'data:image/png;base64,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',
             unitOptions: [
                 {label: '日', value: 'day'},
                 {label: '周', value: 'week'},
@@ -204,7 +205,17 @@ export default {
             this.getLineChart();
         },
         async getCheckOverview() {
+            await this.$nextTick()
+            let loadingInstance = this.$loading({
+                target: document.querySelector('#dom2image'),
+                lock: true,
+                text: '加载中...',
+                spinner: 'el-icon-loading',
+                background: 'rgba(255, 255, 255, 0.9)',
+                customClass: 'customLoading'
+            })
             let data = await getCheckOverviewApi(this.planId)
+            loadingInstance.close();
             this.dataOverview = data || {};
             this.form.period = [data.startDate || '', data.endDate || '']
         },
@@ -449,11 +460,8 @@ export default {
         dom2image() {
             this.isCreating = true;
             let dom = document.getElementById('dom2image');
-            domtoimage.toPng(dom, {bgcolor: '#ffffff'})
+            domtoimage.toPng(dom, {bgcolor: '#ffffff', quality: 0.8, cacheBust:true})
                 .then((dataUrl)=>{
-                    // let img = new Image();
-                    // img.src = dataUrl;
-                    // dom.appendChild(img);
 
                     this.savePdf(dataUrl, dom.clientWidth, dom.clientHeight);
                 })
@@ -471,9 +479,6 @@ export default {
             html2canvas(dom, {useCORS: true, dpi: 300, background: '#ffffff'})
                 .then(canvas => {
                     const dataUrl = canvas.toDataURL("image/jpeg");
-                    // let img = new Image();
-                    // img.src = dataUrl;
-                    // dom.appendChild(img);
 
                     this.savePdf(dataUrl,  dom.clientWidth, dom.clientHeight);
                 })
@@ -485,46 +490,22 @@ export default {
                 })
         },
         savePdf(imageUrl, width, height) {
-            // var pdf = new jsPDF();
-            // pdf.addImage(imageUrl, 'JPEG', 0, 0);
-            // pdf.save('test.pdf');
-
-            var contentWidth = width;
-            var contentHeight = height;
-            //一页pdf显示html页面生成的canvas高度;
-            var pageHeight = contentWidth / 592.28 * 841.89 ;
-            //未生成pdf的html页面高度
-            var leftHeight = contentHeight;
-            //页面偏移
-            var position = 0;
-            //a4纸的尺寸[595.28,841.89]，html页面生成的canvas在pdf中图片的宽高
-            var imgWidth = 595.28;
-            var imgHeight = 592.28 / contentWidth * contentHeight;
-            //注①
-            var pdf = new jsPDF('', 'pt', 'a4');
-            //有两个高度需要区分，一个是html页面的实际高度，和生成pdf的页面高度(841.89)
-            //当内容未超过pdf一页显示的范围，无需分页
-            if(leftHeight < pageHeight) {
-                pdf.addImage(imageUrl, 'JPEG', 0, 0, imgWidth,imgHeight);
-            } else {
-                while(leftHeight > 0) {
-                    //arg3-->距离左边距;arg4-->距离上边距;arg5-->宽度;arg6-->高度
-                    pdf.addImage(imageUrl, 'JPEG', 0, position,imgWidth, imgHeight)
-                    leftHeight -= pageHeight;
-                    position -= 841.89;
-                    //避免添加空白页
-                    if(leftHeight > 0) {
-                        //注②
-                        pdf.addPage();
-                    }
-                }
-            }
-            pdf.save('test.pdf');
-        }
+            var pdf = new jsPDF('p', 'pt', [width, height]);
+            pdf.addImage(imageUrl, 'JPEG', 0, 0,  width, height);
+            pdf.save('数据治理报告.pdf');
+        },
     }
 }
 </script>
 
+<style>
+.customLoading{
+    color: red;
+}
+.customLoading .el-loading-spinner{
+    top: 10%;
+}
+</style>
 <style scoped>
 div /deep/ .el-dialog__body {
     padding: 0;
@@ -568,6 +549,7 @@ div /deep/ .el-dialog__body {
 
 .overview-item img {
     width: 56px;
+    height: 56px;
     vertical-align: top;
     margin: 0 20px 0 0;
 }
@@ -697,7 +679,7 @@ div /deep/ .el-dialog__body {
 }
 
 .line-result::after {
-    content: '校验结论';
+    content: ' 校验结论 ';
     position: absolute;
     left: 30px;
     top: -30px;
