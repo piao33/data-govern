@@ -65,7 +65,7 @@
                 <el-button class="large-btn-120 right20" type="primary" :disabled="!canAllCheck" @click="checkAllData">批量校验</el-button>
                 <el-button class="large-btn-120 right20" type="primary" :disabled="!canAllDownload" @click="download(null)">批量导出</el-button>
                 <el-button class="large-btn-120 right20" type="primary" :disabled="!canAllDelete" @click="showDeleteDialog(null)">批量删除</el-button>
-                <el-button class="large-btn-140" :disabled="hasChecking || hasUploading || hasDeleting || !hasChecked" type="primary" @click="showReport">
+                <el-button class="large-btn-140" :disabled="hasUploading || hasDeleting || (!hasChecked && !hasChecking)" type="primary" @click="showReport">
                     <i v-if="hasChecking" class="el-icon-loading"></i>
                     {{ hasChecking ? '数据治理中...' : '治理结果查看' }}
                 </el-button>
@@ -142,11 +142,26 @@
             </span>
         </el-dialog>
 
-        <el-dialog title="数据治理校验中" center :append-to-body="true" :visible.sync="checkingVisible" width="500px">
-            <div class="progress-box">
+        <el-dialog title="数据治理校验中" center :visible.sync="checkingVisible" width="700px">
+            <!-- <div class="progress-box">
                 <el-progress :text-inside="true" text-color="#fff" :stroke-width="26" :percentage="70"></el-progress>
                 <div class="progressAni" :style="{width: 70+'%'}"></div>
-            </div>
+            </div> -->
+            <ul class="progress-list">
+                <li v-for="(item,i) in percentList" :key="i">
+                    <p>{{ item.tableName }}</p>
+                    <div class="progress-box">
+                        <el-progress 
+                            :text-inside="true" 
+                            :text-color="item.percent === 0 ? '#63656a' : '#fff'" 
+                            :stroke-width="22" 
+                            :percentage="item.percent"
+                            :format="formatPercent"
+                        ></el-progress>
+                        <div v-if="item.percent > 0 && item.percent < 100" class="progressAni" :style="{width: item.percent+'%'}"></div>
+                    </div>
+                </li>
+            </ul>
         </el-dialog>
     </div>
 </template>
@@ -155,7 +170,20 @@
 import governanceReport from  './governanceReport.vue'
 import uploadDialog from './uploadDialog.vue'
 import { getCalcModelApi, getSeasonApi, getTemplateApi, savePlanApi, getPlanApi, checkDataApi, checkAllDataApi,
-     deleteDataApi, deleteAllDataApi, downloadDataApi, downloadAllDataApi, assessApi} from '../api/index.js'
+     deleteDataApi, deleteAllDataApi, downloadDataApi, downloadAllDataApi, assessApi, getCheckProgressApi} from '../api/index.js'
+/**
+ * 操作步骤：
+ * 1.新增方案，选择计算模式和计算期后，点击保存按钮生成方案。如果已有方案，可进行第 2 步
+ * 2.导入表格文件。（状态有：未导入 导入中 导入失败 已导入）
+ * 3.全部导入完成后，开始校验，可以单独和批量校验 （状态有：校验中 校验失败 已校验）
+ * 4.全部校验完成后，可以点击评估按钮，将校验结果保存到数据库结果表中
+ * 
+ * 注：
+ *  有至少一个校验完成时，可以查看治理结果
+ *  删除任何一张表，清楚所有校验结果和评估
+ *  
+ * 
+ */
 export default {
     name: 'editComputeModel',
     components: {
@@ -261,9 +289,20 @@ export default {
             },
             immediate: true
         },
+        hasChecking: {
+            handler(val) {
+                if(val) {
+                    this.getCheckPercent();
+                }else{
+                    clearTimeout(this.percentTimer)
+                }
+            },
+            immediate: true
+        }
     },
     beforeDestroy() {
         clearTimeout(this.timer)
+        clearTimeout(this.percentTimer)
     },
     data() {
         return {
@@ -283,8 +322,10 @@ export default {
             modelList: [],
             seasonList: [],
             templateTable: [],
+            percentList: [],
             oldModelId: '',
             timer: null,
+            percentTimer: null,
             form: {
                 name: '',
                 modelId: '',
@@ -320,6 +361,7 @@ export default {
             this.templateTable = [];
             this.oldModelId = '';
             clearTimeout(this.timer);
+            clearTimeout(this.percentTimer);
             this.canChangeModel = false;
             this.hasSaved = false;
             this.form = {
@@ -373,6 +415,42 @@ export default {
             this.form.year = year;
             this.form.season = season;
         },
+        async getCheckPercent() {
+            let data = await getCheckProgressApi(this.planId)
+            this.percentList = this.handlePercentData(data);
+            console.log(this.percentList)
+            let doneCheck = this.percentList.every(item => item.percent === 100)
+            clearTimeout(this.percentTimer);
+
+            if(doneCheck && !this.hasChecking) {
+                clearTimeout(this.timer)
+                this.getPlan()
+                this.checkingVisible = false;
+            }else {
+                this.percentTimer = setTimeout(() => {
+                    this.getCheckPercent();
+                }, 1000);
+            }
+        },
+        formatPercent(val) {
+            return val === 100 ? '完成' : val === 0 ? '等待中...' : `${val}%`
+        },
+        handlePercentData(data) {
+            if(!data) return {}
+            let res = []
+            for(let key in data) {
+                if(!key.includes('rate') && !key.includes('table')) continue;
+                let id = key.replace(/rate|table/, '');
+                let obj = res.find(item => item.id == id) || {id}
+                if(key.includes('rate')) {
+                    obj.percent = Number(data[key])
+                }else if(key.includes('table')) {
+                    obj.tableName =  data[key]
+                }
+                res.push(obj)
+            }
+            return [...new Set(res)];
+        },
         handleData(data) {
             /**
              * 后端设置的状态 status 参考
@@ -408,9 +486,9 @@ export default {
                     }
                 }else if(item['status'] == '校验中') {
                     if(data[index]['status'] == '已校验'){
-                        this.delayMessage('success', `${item.tableName}，校验成功！`)
+                        this.delayMessage('success', `${item.tableName}，校验成功！`, true)
                     }else if(data[index]['status'] == '校验失败'){
-                        this.delayMessage('error', `${item.tableName}，校验失败！`)
+                        this.delayMessage('error', `${item.tableName}，校验失败！`, true)
                     }
                 }else if(item['status'] == '删除中') {
                     if(data[index]['status'] == '未导入'){
@@ -423,9 +501,9 @@ export default {
             return data;
         },
         // 防止多个任务同时完成，提示框会重叠。包裹在 settimeout 中防止重叠
-        delayMessage(type, msg) {
+        delayMessage(type, msg, showClose) {
             setTimeout(() => {
-                this.$message[type](msg);
+                this.$message[type]({message:msg, duration:showClose ? 3000 : 0, showClose});
             }, 0);
         },
         handlePeriod(str){
@@ -469,12 +547,12 @@ export default {
             this.templateTable[i].uploadVisible = val;
         },
         async uploadSucess(i, msg) {
-            this.$message.success(msg);
+            this.delayMessage('success', msg)
             await this.getPlan();
             this.changeSaveStatus()
         },
         uploadError(i, msg) {
-            this.$message.error(msg);
+            this.delayMessage('error', msg)
             this.getPlan();
         },
         uploading(i) {
@@ -495,18 +573,16 @@ export default {
             if(this.hasChecking) {
                 this.checkingVisible = true;
             }else{
-                this.modelId = this.form.modelId;
                 this.reportVisible = true;
             }
         },
         async checkData(row) {
-            // this.checkingVisible = true;
             row.isChecking = true;
             let {code , msg} = await checkDataApi(row.tableId, this.planId)
             if(code == 200) {
-                this.$message.success(msg || row.tableName + '，校验完成！')
+                this.delayMessage('success', msg || row.tableName + '，校验完成！')
             }else{
-                this.$message.error(msg || row.tableName + '，校验失败！')
+                this.delayMessage('error',  msg || row.tableName + '，校验失败！')
             }
             this.getPlan()
 
@@ -524,13 +600,13 @@ export default {
             if(resArr.length) {
                 resArr.forEach(item=>{
                     if(item.code == 200) {
-                        this.delayMessage('success', item.msg || '校验完成！')
+                        this.delayMessage('success', item.msg || '校验完成！', true)
                     }else {
-                        this.delayMessage('error', item.msg || '校验失败！')
+                        this.delayMessage('error', item.msg || '校验失败！', true)
                     }
                 })
             }else {
-                this.$message.error('批量校验失败！')
+                this.delayMessage('error', '批量校验失败！')
             }
             this.getPlan()
 
@@ -557,9 +633,9 @@ export default {
             this.deleteLoading = true;
             let {code, msg} = await requests()
             if(code == 200) {
-                this.$message.success(msg || `${this.deleteObject.tableName || '批量数据'}，删除成功！`)
+                this.delayMessage('success', msg || `${this.deleteObject.tableName || '批量数据'}，删除成功！`)
             }else {
-                this.$message.error(msg || `${this.deleteObject.tableName || '批量数据'}，删除失败！`)
+                this.delayMessage('error', msg || `${this.deleteObject.tableName || '批量数据'}，删除失败！`)
 
             }
             this.deleteObject = {}
@@ -581,7 +657,7 @@ export default {
                 })
                 requests = downloadAllDataApi.bind(this, this.planId)
             }
-            this.$message.success('下载操作已提交')
+            this.delayMessage('success', '下载操作已提交')
             let {file: blobFile, filename} = await requests()
             if(row?.tableId) {
                 row.isDownloading = false;
@@ -602,7 +678,7 @@ export default {
                 link.setAttribute('download', filename)
                 link.click();
             }else {
-                this.$message.error('导出失败！')
+                this.delayMessage('error', '导出失败！')
             }
         },
         runningStatus(obj) {
@@ -627,9 +703,9 @@ export default {
             this.assessVisible = false;
             this.assessLoading = false;
             if(code == 200) {
-                this.$message.success('操作成功！')
+                this.delayMessage('success', '操作成功！')
             }else {
-                this.$message.error(msg || '操作成功！')
+                this.delayMessage('error', msg || '导出失败！')
             }
         }
     },
@@ -684,7 +760,7 @@ export default {
     width:100%;
     border-radius: 100px;
     background-color: #fff;
-    animation: progress 2.8s linear infinite;
+    animation: progress 2.8s ease-in infinite;
 }
 @keyframes progress {
     0%{
@@ -699,5 +775,15 @@ export default {
         width: 100%;
         opacity: 0;
     }
+}
+
+.progress-list li{
+    margin: 0 0 18px 0;
+}
+.progress-list li:nth-last-child(1){
+    margin-bottom: 0;
+}
+.progress-list p{
+    margin: 0 0 6px 10px;
 }
 </style>

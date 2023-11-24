@@ -85,6 +85,18 @@ function checkAllDataApi(planId) {
     })
 }
 
+// 获取校验进度
+function getCheckProgressApi(key) {
+    return requests({
+        method: 'post',
+        url: `/govern/getProgress`,
+        timeout: 60 * 30 * 1000,
+        data: {
+            key,
+        }
+    })
+}
+
 // 删除数据
 function deleteDataApi(tableId, planId) {
     return requests({
@@ -251,6 +263,7 @@ export {
     uploadFileApi,
     checkDataApi,
     checkAllDataApi,
+    getCheckProgressApi,
     deleteDataApi,
     deleteAllDataApi,
     downloadDataApi,
