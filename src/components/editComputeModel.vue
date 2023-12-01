@@ -503,7 +503,7 @@ export default {
         // 防止多个任务同时完成，提示框会重叠。包裹在 settimeout 中防止重叠
         delayMessage(type, msg, showClose) {
             setTimeout(() => {
-                this.$message[type]({message:msg, duration:showClose ? 3000 : 0, showClose});
+                this.$message[type]({message:msg, duration:showClose ? 0 : 3000, showClose: !!showClose});
             }, 0);
         },
         handlePeriod(str){
